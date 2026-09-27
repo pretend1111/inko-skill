@@ -4,7 +4,8 @@ All scripts run locally (Pillow + numpy; OpenCV optional), take a second or two 
 AI labels: the visible 「AI生成 · Inko」 is carried or re-applied at ≥ 5 % of the output's shortest side, the AIGC
 metadata is copied into PNG / JPEG / WebP / PDF outputs. Pages generated without a visible label stay without one.
 
-Contents: ink.py · photo.py · compose.py · paper.py make · pdf.py · recipes · what not to do
+Contents: ink.py · photo.py · compose.py (incl. drift: natural left edges) · paper.py make · pdf.py · recipes ·
+what not to do
 
 ## ink.py — colour, weight, darkness, texture
 
@@ -59,9 +60,32 @@ darkness, else the writing already on the paper, else the page's ink darkened; `
 looks faded on photos), `--texture`, `--weight`, `--darkness`, `--soften px` (match photo blur), `--grain` (match sensor
 noise; measured automatically), `--label-corner auto|br|bl|tr|tl` (auto: the first corner without new handwriting),
 `-q`. lines: `--start-line`, `--every 2`, `--over-writing`, `--lift` (default: like the existing writing, else 0.14),
-`--x-offset`, `--scale`, several `--paper`s. page: `--paper-size`, `--offset-mm dx,dy`. place: `--fit
-contain|width|height|scale`, `--align`, `--valign`, `--rotate`, `--from-mm x,y,w,h` (only that region of the page). The JSON output says which colour / lift / corner were
-used and why. Details and troubleshooting: `paper-matching.md`.
+`--x-offset`, `--scale`, several `--paper`s, `--drift natural|random|none` (default `natural`) and `--drift-amount`
+(default 1.0) — see drift below; the `check` lists each line's `drift_mm`. page: `--paper-size`, `--offset-mm dx,dy`.
+place: `--fit contain|width|height|scale`, `--align`, `--valign`, `--rotate`, `--from-mm x,y,w,h` (only that region of
+the page). The JSON output says which colour / lift / corner were used and why. Details and troubleshooting:
+`paper-matching.md`.
+
+### compose.py drift — left edges that aren't ruler-straight
+
+Every line the engine writes starts at exactly the same x, so a page of left-aligned lines has a ruler-straight left
+edge — one of the first things that gives a "handwritten" page away. A real hand drifts: each line starts a little
+further right than the one before, or a little off in either direction.
+```bash
+python scripts/compose.py drift --job inko-output/<run> -o drifted [--drift natural|random] [--drift-amount 1] [--seed N]
+```
+`-o` is a folder (the pages keep their names; `plan.json`, `layout.json` and a rebuilt `inko.pdf` come along), or a
+`.png` for a single page; the JSON `outputs` list each written page and its `offsets_mm`.
+- `natural` (default): a slow creep to the right plus a little wobble, like a hand moving down the page, easing back
+  at a new problem or after a blank line; `random`: the small wobble without the creep. `--drift-amount` scales it
+  (0.6 subtler, 1.4 stronger); `--seed` gives another variation.
+- It moves only the ink, line by line (rows from `plan.json`, else found on the page); the paper, ruled lines, margin
+  line and answers in boxes stay where they are. The label and AIGC metadata are kept; if the job had a PDF, a new one
+  is written from the drifted pages.
+- Use it on pages delivered as they are — homework, notes, letters, anything with several left-aligned lines — before
+  `photo.py` / `ink.py`. Skip it after `compose.py lines` (it drifts already); it refuses 作文纸 / 田字格 (characters
+  belong in their cells) and a page it has already drifted (`--force` overrides the latter).
+- Look at the result: the text must still clear the margin line and the right edge.
 
 ## paper.py make — papers Inko doesn't have
 
@@ -94,6 +118,7 @@ job's own `inko.pdf` is already the PDF.
 | 像扫描件 PDF | `photo.py page-N.png --preset scan` for each page → `pdf.py *-scan.jpg -o scan.pdf` |
 | 米黄色信纸 | generate with `--paper cream`, or `paper.py make --paper cream …` + compose |
 | 透明底 PNG 给设计用 | `ink.py extract page-1.png -o ink.png` |
+| 左边对得太齐、像打印的 | `compose.py drift --job RUN -o drifted` (`--drift-amount 1.4` if still too straight) |
 
 ## What not to do
 
@@ -101,3 +126,5 @@ job's own `inko.pdf` is already the PDF.
 - Don't "clean up" generated handwriting with filters that make it look typeset (sharpening, thresholding to pure
   black) — it removes exactly the natural variation users pay for.
 - Don't run `photo.py` on a photo of the user's real paper (double perspective, double lighting).
+- Don't fake an uneven left edge with spaces or tiny indent marks (they move whole paragraphs' first lines only and
+  look deliberate) — `compose.py drift` does it per line. Don't drift a page twice (e.g. after `compose.py lines`).

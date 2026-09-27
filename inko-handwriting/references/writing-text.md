@@ -15,10 +15,14 @@ typeset structure, markdown leftovers, odd punctuation. Clean the text first.
 - Spaces are narrow: a half-width space and a full-width space `　` both come out about a third of a character wide.
   Don't indent or align with spaces — use `indent` (layout `d` or a `line` mark) or `align`. Two half-width spaces
   between date / weekday / weather in a diary heading look natural.
+- Every line starts at exactly the same x, which no hand does. Don't fake an uneven left edge with spaces or tiny
+  indent marks; run `compose.py drift` on the finished pages (`postprocess.md`; `compose.py lines` does it already).
 
 ## Punctuation
 
 - Chinese text: full-width `，。、；：？！“”‘’（）《》……——`. `「」` are not writable → use `“”`.
+- Math solutions and derivations are the exception: no full stops at all (`。．.`), commas at most, nothing at line
+  ends (`writing-math.md` §1). Letters, essays and diaries keep their `。`.
 - English text: ASCII punctuation; straight or curly quotes both work.
 - Numbers and units: `3.5 kg`, `25℃` (℃ works; `°` doesn't — write `25 度` or `$25^{o}$` with logic-1), `50%` works.
 - Circled numbers `①②③` work; roman numerals `Ⅰ Ⅱ` don't → `I, II` or `一、二、`; superscripts `²` don't → `m2` in

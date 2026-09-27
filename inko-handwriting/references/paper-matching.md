@@ -82,6 +82,10 @@ Useful options:
 - `--lift` baseline height above the line in line spacings — default: like the writing already on the page, else 0.14
   (lower it to sit closer to the line). The output JSON says which colour and lift were used and why.
 - `--x-offset 0.5` shift right by half a line spacing; `--scale 0.95` slightly smaller writing
+- `--drift natural|random|none` (default `natural`), `--drift-amount 1.0`: real handwriting isn't ruler-aligned, so each
+  line's left edge drifts a little — `natural` a slow creep to the right plus wobble (easing back at a new problem),
+  `random` the wobble without the creep. The `check` lists each line's `drift_mm`. The result is final: don't run
+  `compose.py drift` on it again.
 - `--soften`, `--grain` match blur/noise of the photo (auto by default)
 - Several sheets: `--paper p1.json p2.json`; text continues on the next sheet (or another copy of the last one).
 - Pages generated without `plan.json`: rows are found from the page itself (`--plan` if you have one saved).
@@ -96,6 +100,8 @@ Open `final.jpg` and zoom into the first, a middle and the last line.
 - Text floats above the lines → `--lift 0.08`; sits on or below the lines → `--lift 0.2`.
 - Starts too far left/right → `--x-offset ±0.3`. Runs past the right edge → the layout's right margin is too small:
   use the suggested margins, or `--scale 0.95`.
+- Left edges look like a ruled column → `--drift-amount 1.4`; wander too much → `--drift-amount 0.6`; a steady creep
+  looks wrong for this writer → `--drift random`. Keep drift on: `--drift none` only if the user asks for straight edges.
 - Wrong lines used → `--start-line` (numbers are on the overlay).
 - Lines missing on the overlay (very faint print) → re-run analyze with `--line-mm`, a sharper photo, or a scan.
 - Ink looks too clean/sharp for a blurry photo → `--soften 1.0`; too grey → `--color black` or `--darkness 0.3`.
@@ -148,6 +154,6 @@ The sheet's size must be the size you planned in (A4 → A4). For a B5 or Letter
 `analyze` finds the sheet (Otsu + contour), recovers its true aspect from the perspective, straightens it, removes the
 residual tilt, then measures thin dark horizontal structures in ~20–40 vertical strips (median per strip, so handwriting
 doesn't count as a line), estimates the spacing from their autocorrelation, and links strip peaks into curves.
-`compose lines` crops each generated row by its plan baseline, scales it to the local line spacing, bends it along
-the paper line (mesh warp) and multiplies it into the paper; for straightened photos the ink is warped back into the
-original photo with the inverse perspective.
+`compose lines` crops each generated row by its plan baseline, scales it to the local line spacing, shifts its start
+by the row's drift, bends it along the paper line (mesh warp) and multiplies it into the paper; for straightened photos
+the ink is warped back into the original photo with the inverse perspective.

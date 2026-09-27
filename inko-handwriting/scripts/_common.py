@@ -140,7 +140,13 @@ def read_meta(img: Image.Image) -> dict:
             ink = json.loads(info["InkoInk"])
         except ValueError:
             ink = None
-    return {"aigc": aigc, "label_png": info.get("InkoLabel"), "ink": ink, "dpi": info.get("dpi")}
+    drift = None                                       # compose.py drift / lines --drift already moved the left edges
+    if info.get("InkoDrift"):
+        try:
+            drift = json.loads(info["InkoDrift"])
+        except ValueError:
+            drift = {"raw": str(info["InkoDrift"])}
+    return {"aigc": aigc, "label_png": info.get("InkoLabel"), "ink": ink, "dpi": info.get("dpi"), "drift": drift}
 
 
 def merge_meta(*metas: dict) -> dict:
@@ -192,6 +198,8 @@ def save_image(img: Image.Image, path: str | Path, meta: dict | None = None, dpi
             info.add_text("InkoLabel", meta["label_png"])
         if meta.get("ink"):
             info.add_text("InkoInk", json.dumps(meta["ink"], ensure_ascii=False))
+        if meta.get("drift"):
+            info.add_text("InkoDrift", json.dumps(meta["drift"], ensure_ascii=True))
         info.add_text("Software", f"{PRODUCER} / {SKILL_TAG}")
         img.save(p, "PNG", pnginfo=info, compress_level=6, **kw)
     elif ext in (".jpg", ".jpeg"):

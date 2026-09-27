@@ -35,7 +35,13 @@ All examples were made by AI agents following this skill in our tests; every ima
 2. Send your AI agent this repository link and the key, e.g.
    *"Install the handwriting skill from https://github.com/pretend1111/inko-skill — my Inko API key is ink_live_…"*
 3. Ask for handwriting. The agent always shows you the price before anything is charged
-   (¥1.8 per 1000 characters, at least 100 characters per job; quotes and previews are free).
+   (¥0.002 per character, i.e. ¥2 per 1000, at least 100 characters per job; quotes and previews are free). It is pure
+   pay-as-you-go from your Inko balance — no subscription or membership; new accounts get ¥3 to try it out.
+4. Optional: in the website's 字迹库, set a **常用字迹** (your default handwriting) and ★ favourites. The agent writes in
+   your 常用字迹 unless you ask for another, and picks from your favourites when it has to choose. Say
+   *"以后都用这个字迹"* and it saves the new one for you.
+5. Optional: **your own handwriting** (专属字迹). Buy a custom-handwriting seat on the website (¥19.9, one-off, never
+   expires; one seat = one custom handwriting) and enrol your samples there; the agent can then write in it (Lyric 1).
 
 ## For AI agents: how to install this skill
 
@@ -78,7 +84,7 @@ inko-handwriting/
                            handwriting choice, own-paper matching, post-processing, API, troubleshooting
   assets/layouts/          letter, homework (ruled), notes, essay (作文纸), worksheet-answers templates
   scripts/
-    inko.py                API client: doctor, auth, styles, previews, quote, layout(+preview), generate, wait, rewrite …
+    inko.py                API client: doctor, auth, styles (+ favourites), default-style, previews, quote, layout(+preview), generate, wait, rewrite …
     preview.py             free local preview of a layout
     ink.py                 recolour / re-weight / re-texture handwriting, extract a transparent ink layer
     paper.py               analyse a photo of ruled paper, find worksheet blanks, straighten photos, draw papers
@@ -101,7 +107,8 @@ Everything except `inko.py` runs locally and never uploads your images.
 - **Your key** stays on your machine (user config folder or `./.inko/key`, git-ignored). Revoke it on the website any time.
 - **AI labels**: every Inko page carries a visible 「AI生成 · Inko」 label and hidden AIGC metadata as required by Chinese
   law (GB 45438-2025). The scripts keep both on every derived image and PDF and re-apply the visible label at the
-  required size; please don't remove them.
+  required size; please don't remove them. Pages without the visible label are only available to accounts that
+  bought a custom-handwriting seat and signed the AI-labelling agreement on the website (the metadata stays).
 - Inko refuses IOUs, receipts, contracts, certificates, leave notes and signatures (not charged).
 
 ## Development

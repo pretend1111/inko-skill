@@ -11,7 +11,8 @@ Contents: 1. Minimal spec · 2. Papers · 3. Page settings `d` · 4. Styling cha
 ```json
 {"text": "第一段\n第二段", "paperId": "ruled8", "d": {}}
 ```
-- `text`: the whole document, one paragraph per line; `$…$` / `$$…$$` only with `logic-1`.
+- `text`: the whole document, one paragraph per line; `$…$` formulas only with `logic-1`. (`$$…$$` also exists but
+  is always centred on a line of its own, like a textbook — keep it out of student work, `writing-math.md` §4.)
 - Everything else is optional. Units are **mm**, origin top-left of the A4 sheet (210 × 297).
 - Model and handwriting are not part of the layout: pass `--model` / `--style` / `--pen-*` to `inko.py generate`.
 - `inko.py` also accepts a full request body `{"model": …, "layout": {…}}`.
@@ -46,13 +47,13 @@ instead composes onto the user's paper locally (`paper-matching.md`).
 | `line` | line spacing as a multiple of `size` (blank paper) | 1.7 |
 | `letter` | extra letter spacing, fraction of the size | 0 |
 | `align` | `left` / `center` / `right` | left |
-| `indent` | first-line indent, in character sizes (decimals allowed, e.g. 3.4) | 2 |
+| `indent` | first-line indent, in character sizes (decimals allowed, e.g. 3.4); first visual line only, left-aligned only | 2 |
 | `margins` | `[top, right, bottom, left]` mm; `null` entries follow the paper | paper's |
 | `cols` / `rows` | characters per line / lines per page; given → size, spacing are derived | 0 (auto) |
 | `skip` | leave the first N lines of page 1 empty | 0 |
 | `lineStep` | ruled paper: 1 = every line, 2 = every other line | 1 |
 | `shear` | slant of the characters, degrees | 0 |
-| `style` | default handwriting for the layout (else `--style`) | — |
+| `style` | default handwriting for the layout (else `--style`, else the account's 常用字迹) | — |
 | `perPage` | at most N characters per page (0 = full) | 0 |
 | `autoFlow` | text overflowing a box continues in the next box of the chain | true |
 | `fillRest` | text not placed in boxes is written in the page's writing area | true |
@@ -60,6 +61,7 @@ instead composes onto the user's paper locally (`paper-matching.md`).
 | `pen` | default pen for the page, `type|color|weight|ink` (see 6) | original |
 
 `pageDefaults: [null, {"size": 6}, …]` pins settings for single pages (index = page).
+Short paragraphs (≤ 20 characters, not ending in `。！？；.!?;`) get no first-line indent unless a mark sets one.
 
 ## 4. Styling characters: `marks`
 
@@ -74,7 +76,9 @@ paragraph** when you align or indent it.
 - `id` may be omitted.
 
 If you do write `start`/`end` yourself: positions in `text` as sent (after JSON unescaping, `\frac` is 5 characters),
-counted in UTF-16 units — like Python `len()` except emoji and very rare characters count double.
+counted in UTF-16 units — like Python `len()` except emoji and very rare characters count double. `inko.py` then leaves
+long formulas unsplit (splitting would shift your positions; the same for `blocks` and a box `range`; `writing-math.md`
+§4) — another reason to use the shorthand.
 
 ## 5. Boxes
 
@@ -133,6 +137,8 @@ Date in the exercise-book header (`ruled8`/`ruled7`):
 ```
 Continuation lines lined up under the text after `1. 解：`: `{"line": [1, 4], "f": {"indent": 3}}` (see
 `writing-math.md` §4).
+Left edges that aren't ruler-straight: not a layout setting — every line starts at exactly the same x. Run
+`compose.py drift` on the generated pages (`postprocess.md`); don't fake it with spaces or tiny indent marks.
 Every other line on ruled paper: `"d": {"lineStep": 2}`. Exactly 20 characters per line: `"d": {"cols": 20}`.
 Match a real paper: use `suggested_layout` from `paper.py analyze` (blank paper, `size`, `line`, `margins`).
 Two columns: two `rect` boxes side by side with `"flow": true`, `order` 1 and 2, and `"d": {"fillRest": false}`.
@@ -148,7 +154,9 @@ Ready-made templates: `assets/layouts/` (`letter.json`, `homework-ruled8.json`, 
 python scripts/inko.py layout --spec layout.json --model logic-1 --out plan.json --preview preview.png
 ```
 - `pages`, `chars` (billing for layout jobs; each formula counts once), `unplaced` (> 0 → some text doesn't fit:
-  enlarge boxes, add pages or shorten), `warnings`.
+  enlarge boxes, add pages or shorten), `warnings` (`mshrink` / `mtiny`: a formula too wide for the line, or too tall
+  for the ruled line spacing, was squeezed — let a long chain run on instead, `writing-math.md` §4; `mexpand`: a
+  formula took two lines, usually a `$$…$$`). With logic-1 also `formula_splits` / `formula_note` and `math_style`.
 - `preview.png` (and `preview-2.png` …): the paper, boxes (dashed), every character at its place in a font, formulas as
   blue boxes, the label corner. Show it to the user when placement matters.
 - `plan.json` → `plan.pages[k]` = list of characters `{c, x, y, s, w, r, h, st, row, box, m}`: `x, y` is the

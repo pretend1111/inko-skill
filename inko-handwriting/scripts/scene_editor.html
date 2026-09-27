@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inko 笔迹编辑器</title>
+<style>
+:root {
+  --bg: #f3f2ef; --panel: #ffffff; --line: #dedbd4; --text: #23221f; --muted: #6d6a63;
+  --accent: #2f6fde; --accent-soft: rgba(47, 111, 222, .14); --warn: #c2410c; --desk: #d6d3cc;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text); background: var(--bg); display: flex; flex-direction: column;
+}
+header {
+  display: flex; gap: 6px; align-items: center; padding: 6px 10px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--line); background: var(--panel);
+}
+header h1 { font-size: 14px; margin: 0 10px 0 0; font-weight: 600; white-space: nowrap; }
+button, select, input { font: inherit; color: inherit; }
+button {
+  border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { border-color: #b3aea3; }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+select { border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; background: #fff; }
+.sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+#status { margin-left: auto; color: var(--muted); white-space: nowrap; }
+#status.dirty { color: var(--warn); }
+main { flex: 1; display: flex; min-height: 0; }
+#view { flex: 1; position: relative; overflow: hidden; background: var(--desk); }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#side { width: 330px; border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 4px 12px 40px; }
+#side h2 { font-size: 12px; letter-spacing: .05em; color: var(--muted); margin: 16px 0 6px; font-weight: 600; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 5px 0; }
+.row label { display: flex; gap: 4px; align-items: center; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; }
+#selinfo { min-height: 36px; word-break: break-all; }
+.note { background: #fff8e6; border: 1px solid #f0dca8; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 8px 0; }
+#msg { white-space: pre-wrap; font-size: 12px; margin-top: 8px; word-break: break-all; }
+#msg.err { color: var(--warn); }
+.anom { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; margin: 4px 0; cursor: pointer; font-size: 12px; }
+.anom:hover { border-color: var(--accent); background: var(--accent-soft); }
+.anom b { font-weight: 600; margin-right: 4px; }
+kbd {
+  font: 11px ui-monospace, Consolas, "Microsoft YaHei", monospace; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 4px; padding: 0 4px; background: #faf9f7;
+}
+table.keys { border-collapse: collapse; font-size: 12px; }
+table.keys td { padding: 2px 10px 2px 0; vertical-align: top; }
+table.keys td:first-child { white-space: nowrap; }
+input[type=range] { width: 130px; }
+input[type=number] { width: 64px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+@media (max-width: 800px) {
+  main { flex-direction: column; }
+  #view { min-height: 60vh; }
+  #side { width: auto; border-left: 0; border-top: 1px solid var(--line); }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Inko 笔迹编辑器</h1>
+  <select id="pageSel" title="翻页（PageUp / PageDown）"></select>
+  <button id="zoomOut" title="缩小视图（Ctrl + 滚轮）">−</button>
+  <button id="zoomFit" title="显示整页">整页</button>
+  <button id="zoomWidth" title="按页宽显示">页宽</button>
+  <button id="zoomIn" title="放大视图（Ctrl + 滚轮）">+</button>
+  <span class="sep"></span>
+  <button id="undoBtn" title="撤销（Ctrl+Z）">撤销</button>
+  <button id="redoBtn" title="重做（Ctrl+Y）">重做</button>
+  <span class="sep"></span>
+  <button id="saveBtn" class="primary" title="保存修改（Ctrl+S）">保存</button>
+  <button id="exportBtn" title="先保存，再按真实的笔效果导出 PNG 和 PDF">导出</button>
+  <span id="status">加载中…</span>
+</header>
+<main>
+  <div id="view">
+    <canvas id="cv"></canvas>
+  </div>
+  <aside id="side">
+    <div id="hint" class="note">预览只显示墨色；笔的质感和粗细在导出时才加上。AI 标识是页面的一部分，导出时一定保留。</div>
+    <h2>选择</h2>
+    <div id="selinfo" class="muted small">单击选字，拖出方框多选，双击选中整行。</div>
+    <div class="row">
+      <button id="selLine" title="全选这一行（L）">选整行</button>
+      <button id="selAll" title="选中本页所有的字（Ctrl+A）">全选</button>
+      <button id="selNone" title="取消选择（Esc）">取消选择</button>
+      <button id="hideBtn" title="隐藏选中的字（Delete）">隐藏</button>
+      <button id="showBtn" title="让选中的、已隐藏的字重新显示">取消隐藏</button>
+    </div>
+    <div class="row small"><label><input type="checkbox" id="showHidden"> 显示已隐藏的字（半透明）</label></div>
+
+    <h2>位置 · 大小 · 角度</h2>
+    <div class="row">
+      <button data-nudge="-1,0" title="左移（←）">←</button>
+      <button data-nudge="1,0" title="右移（→）">→</button>
+      <button data-nudge="0,-1" title="上移（↑）">↑</button>
+      <button data-nudge="0,1" title="下移（↓）">↓</button>
+      <label class="small" title="每按一次移动的距离；按住 Shift 移 5 倍">步长 <select id="step"><option value="0.1">0.1 毫米</option><option value="0.3" selected>0.3 毫米</option><option value="1">1 毫米</option></select></label>
+    </div>
+    <div class="row">
+      <button id="smaller" title="选中的字缩小 2%（−）">缩小</button>
+      <button id="bigger" title="选中的字放大 2%（+）">放大</button>
+      <button id="rotL" title="向左转 0.5°（[）">⟲ 0.5°</button>
+      <button id="rotR" title="向右转 0.5°（]）">⟳ 0.5°</button>
+    </div>
+    <div class="small muted">拖动选框右下角的蓝色小方块，可以自由缩放。</div>
+
+    <h2>换笔</h2>
+    <div class="row">
+      <select id="penType" title="笔的种类"><option value="original">原样</option><option value="gel">中性笔</option><option value="ballpoint">圆珠笔</option><option value="fountain">钢笔</option><option value="pencil">铅笔</option></select>
+      <select id="penColor" title="墨水颜色"><option value="black">黑</option><option value="blue">蓝</option><option value="blueblack">蓝黑</option></select>
+    </div>
+    <div class="row small"><label title="−1 最细，0 不变，1 最粗">粗细 <input type="range" id="penWeight" min="-1" max="1" step="0.05" value="0"></label><span id="penWeightV" class="mono">0</span></div>
+    <div class="row small"><label title="−1 最淡，0 不变，1 最浓">浓淡 <input type="range" id="penInk" min="-1" max="1" step="0.05" value="0"></label><span id="penInkV" class="mono">0</span></div>
+    <div class="row">
+      <button id="penSel" title="选中的字换成上面这支笔">用于选中的字</button>
+      <button id="penAll" title="整份所有的字都换成上面这支笔">用于全部</button>
+      <button id="penReset" title="选中的字换回包里原来的笔">恢复原笔</button>
+    </div>
+
+    <h2>自动调整</h2>
+    <div class="row">
+      <button id="tightenBtn" title="把选中的行（没选就是全部行）里过大的字间距收紧">收紧间距</button>
+      <label class="small" title="字间空隙超过字高的这么多倍，才算过大">超过 <input type="number" id="maxGap" value="0.35" min="0.1" max="2" step="0.05"> 倍字高</label>
+    </div>
+    <div class="row">
+      <button id="driftBtn" title="让每行开头像手写一样自然错开，而不是齐刷刷一条直线">行首自然偏移</button>
+      <select id="driftMode" title="渐进：越写越往右，偶尔拉回；随机：左右随机错开"><option value="natural">渐进</option><option value="random">随机</option></select>
+      <button id="alignBtn" title="把选中的行（没选就是全部行）的字放到同一条直的基线上">对齐基线</button>
+    </div>
+
+    <h2>检查</h2>
+    <div class="row"><button id="checkBtn" title="找出字距过大、粗细不一、重叠、出界等问题">查找问题</button><span id="checkSum" class="small muted"></span></div>
+    <div id="anoms"></div>
+    <div id="msg"></div>
+
+    <h2>快捷键</h2>
+    <table class="keys">
+      <tr><td><kbd>单击</kbd> <kbd>拖动</kbd></td><td>选字 · 框选 · 挪字</td></tr>
+      <tr><td><kbd>Shift</kbd>+单击</td><td>加选 / 取消选中</td></tr>
+      <tr><td><kbd>双击</kbd> <kbd>L</kbd></td><td>选中整行</td></tr>
+      <tr><td><kbd>Ctrl+A</kbd> <kbd>Esc</kbd></td><td>本页全选 · 取消选择</td></tr>
+      <tr><td><kbd>←↑↓→</kbd></td><td>微移（按住 Shift 移 5 倍）</td></tr>
+      <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>放大 · 缩小</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>向左转 · 向右转</td></tr>
+      <tr><td><kbd>Delete</kbd></td><td>隐藏</td></tr>
+      <tr><td><kbd>Ctrl+Z</kbd> <kbd>Ctrl+Y</kbd></td><td>撤销 · 重做</td></tr>
+      <tr><td><kbd>Ctrl+S</kbd></td><td>保存</td></tr>
+      <tr><td><kbd>滚轮</kbd></td><td>上下滚动</td></tr>
+      <tr><td><kbd>Ctrl+滚轮</kbd></td><td>缩放视图</td></tr>
+      <tr><td><kbd>空格</kbd>+拖动</td><td>平移视图</td></tr>
+      <tr><td><kbd>PageUp</kbd> <kbd>PageDown</kbd></td><td>翻页</td></tr>
+    </table>
+    <div class="note">修改会记成一条条小操作，存在 <span class="mono">edits.json</span> 里，原来的笔迹包不会被改动。<span id="labelNote">每次导出都会带上显式标识「AI生成 · Inko」和 AIGC 元数据。</span></div>
+  </aside>
+</main>
+<script>
+"use strict";
+const TOKEN = "__INKO_TOKEN__";
+const INK = { black: [0, 0, 0], blue: [22, 58, 168], blueblack: [22, 34, 86] };
+const GRAPHITE = [58, 58, 64];
+const TYPES = ["original", "gel", "ballpoint", "fountain", "pencil"];
+// what the person sees (the values above stay the package's own keys)
+const PEN_ZH = { original: "原样", gel: "中性笔", ballpoint: "圆珠笔", fountain: "钢笔", pencil: "铅笔" };
+const COLOR_ZH = { black: "黑", blue: "蓝", blueblack: "蓝黑" };
+const CMD_ZH = { tighten: "收紧间距", drift: "行首自然偏移", "align-baseline": "对齐基线" };
+const TYPE_ZH = { gap: "空隙过大", stroke: "粗细不一", overlap: "重叠", off_paper: "出了纸面", near_edge: "太靠纸边",
+                  under_label: "压住标识", outside_margin: "出了版心", hidden: "已隐藏" };
+// why a request failed (the caller puts "保存失败：" / "收紧间距没能完成：" … in front); same texts as ERR_ZH in scene.py
+const ERR_ZH = {
+  offline: "连不上编辑器（它可能已经关掉了）。请回到对话里让 AI 重新打开编辑器。",
+  bad_host: "只能在本机浏览器里打开编辑器（地址要以 127.0.0.1 开头）。",
+  bad_token: "这个页面已经失效（编辑器可能重启过）。请刷新页面。",
+  not_found: "找不到要读取的内容。请刷新页面再试。",
+  bad_edits: "修改记录里有无法识别的内容。",
+  conflict: "修改记录在你打开编辑器之后被别处改过了（可能是 AI 同时在改）。请刷新页面再继续；这里还没保存的修改会丢失。",
+  bad_request: "请求的内容有误。",
+  failed: "笔迹包或修改记录（edits.json）读不出来，可能被改坏了。请回到对话里让 AI 检查一下。",
+  internal: "编辑器内部出错了。",
+};
+const $ = (id) => document.getElementById(id);
+const cv = $("cv");
+
+let S = null;                        // scene.json
+let PPM = 300 / 25.4;                // page px per mm
+let edits = [], savedJSON = "[]", rev = "0", redoStack = [];
+let G = {}, pages = [];              // glyph state (scene + edits)
+let cur = 0, sel = new Set(), showHidden = false;
+let view = { s: 0.2, tx: 20, ty: 20 };
+const imgs = {};
+const tintCache = new Map();
+let mode = null, spaceDown = false, lastNudge = null, anomalies = [];
+
+// ── affine maps [a, b, c, d, e, f]: x' = a x + b y + c, y' = d x + e y + f ─────────────
+const I6 = [1, 0, 0, 0, 1, 0];
+function mul(A, B) {
+  return [A[0] * B[0] + A[1] * B[3], A[0] * B[1] + A[1] * B[4], A[0] * B[2] + A[1] * B[5] + A[2],
+          A[3] * B[0] + A[4] * B[3], A[3] * B[1] + A[4] * B[4], A[3] * B[2] + A[4] * B[5] + A[5]];
+}
+function ap(A, x, y) { return [A[0] * x + A[1] * y + A[2], A[3] * x + A[4] * y + A[5]]; }
+function inv(A) {
+  const det = A[0] * A[4] - A[1] * A[3];
+  const a = A[4] / det, b = -A[1] / det, d = -A[3] / det, e = A[0] / det;
+  return [a, b, -(a * A[2] + b * A[5]), d, e, -(d * A[2] + e * A[5])];
+}
+function T(dx, dy) { return [1, 0, dx, 0, 1, dy]; }
+function about(L, p) { return mul(T(p[0], p[1]), mul([L[0], L[1], 0, L[2], L[3], 0], T(-p[0], -p[1]))); }
+function rot(deg) { const r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [c, -s, s, c]; }
+function boxOf(pts) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  return [x0, y0, x1, y1];
+}
+function corners(b) { return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]; }
+const r4 = (v) => Math.round(v * 1e4) / 1e4;
+
+// ── pens (same rules as _pen.normalize) ─────────────────────────────────────────────
+function num(v) { if (typeof v === "boolean") return 0; const x = Number(v); return Number.isFinite(x) ? Math.min(1, Math.max(-1, x)) : 0; }
+function normPen(p) {
+  p = p && typeof p === "object" ? p : {};
+  return { weight: num(p.weight ?? 0), ink: num(p.ink ?? 0),
+           type: TYPES.includes(p.type) ? p.type : "original", color: p.color in INK ? p.color : "black" };
+}
+function inkRGB(p) { return p.type === "pencil" ? GRAPHITE : INK[p.color]; }
+function penName(p) { return PEN_ZH[p.type] + (p.type === "pencil" ? "" : "（" + COLOR_ZH[p.color] + "）"); }
+
+// ── glyph state ─────────────────────────────────────────────────────────────────────
+function makeGlyph(p, d) {
+  const m0 = d.m.slice();
+  const [, , sw, sh] = d.sprite.rect;
+  const quad = boxOf(corners([0, 0, sw, sh]).map(([u, v]) => ap(m0, u, v)));
+  const ink0 = d.ink ? d.ink.slice() : quad;
+  const im = inv(m0);
+  let sb = boxOf(corners(ink0).map(([x, y]) => ap(im, x, y)));
+  sb = [Math.max(0, sb[0]), Math.max(0, sb[1]), Math.min(sw, sb[2]), Math.min(sh, sb[3])];
+  return { id: d.id, p, d, m0, E: I6.slice(), hidden: false, pen: null, size0: d.size || 1,
+           anchor0: (d.anchor || [m0[2], m0[5]]).slice(), ink0, sb, sw, sh };
+}
+function gm(g, E) { return mul(E || g.E, g.m0); }
+function gink(g, E) {
+  E = E || g.E;
+  if (E[0] === 1 && E[1] === 0 && E[3] === 0 && E[4] === 1) return [g.ink0[0] + E[2], g.ink0[1] + E[5], g.ink0[2] + E[2], g.ink0[3] + E[5]];
+  const m = mul(E, g.m0);
+  return boxOf(corners(g.sb).map(([u, v]) => ap(m, u, v)));
+}
+function ganchor(g) { return ap(g.E, g.anchor0[0], g.anchor0[1]); }
+function resolve(ids) { return ids === "all" ? Object.values(G) : ids.map((i) => G[i]).filter(Boolean); }
+function applyOp(op) {
+  if (op.op === "note") return;
+  const gl = resolve(op.ids);
+  if (op.op === "move") {
+    const A = T(op.dx * PPM, op.dy * PPM);
+    for (const g of gl) g.E = mul(A, g.E);
+  } else if (op.op === "scale" || op.op === "rotate") {
+    const L = op.op === "scale" ? [op.k, 0, 0, op.k] : rot(op.deg);
+    const ab = op.about || "anchor";
+    let selc = null;
+    if (ab === "selection" && gl.length) {
+      const bs = gl.map((g) => gink(g));
+      selc = [(Math.min(...bs.map((b) => b[0])) + Math.max(...bs.map((b) => b[2]))) / 2,
+              (Math.min(...bs.map((b) => b[1])) + Math.max(...bs.map((b) => b[3]))) / 2];
+    }
+    for (const g of gl) {
+      let pt;
+      if (Array.isArray(ab)) pt = ab;
+      else if (ab === "center") { const k = gink(g); pt = [(k[0] + k[2]) / 2, (k[1] + k[3]) / 2]; }
+      else if (ab === "selection") pt = selc;
+      else pt = ganchor(g);
+      g.E = mul(about(L, pt), g.E);
+    }
+  } else if (op.op === "pen") {
+    for (const g of gl) g.pen = op.pen ? normPen(op.pen) : null;
+  } else if (op.op === "hide" || op.op === "show") {
+    for (const g of gl) g.hidden = op.op === "hide";
+  }
+}
+function rebuild() {
+  G = {};
+  pages = S.pages.map((pg, p) => (pg.glyphs || []).map((d) => { const g = makeGlyph(p, d); G[g.id] = g; return g; }));
+  for (const op of edits) applyOp(op);
+}
+function basePen(g) {
+  const L = S.pages[g.p].layers || [], li = g.d.layer;
+  if (Number.isInteger(li) && li >= 0 && li < L.length) return normPen(L[li].pen);
+  return normPen(g.d.pen || S.pen);
+}
+function penOf(g) { return g.pen || basePen(g); }
+function lineOf(g) { return (S.pages[g.p].lines || []).find((l) => l.id === g.d.line) || null; }
+
+// ── images ──────────────────────────────────────────────────────────────────────────
+function loadImg(rel) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error(`笔迹包里的图片读不出来（${rel}），请刷新页面重试。`));
+    im.src = "/pkg/" + rel;
+  });
+}
+function tinted(atlas, rgb) {
+  const key = atlas + "|" + rgb.join(",");
+  if (tintCache.has(key)) return tintCache.get(key);
+  const im = imgs[atlas];
+  const c = document.createElement("canvas");
+  c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  x.drawImage(im, 0, 0);
+  const id = x.getImageData(0, 0, c.width, c.height), a = id.data;
+  for (let i = 0; i < a.length; i += 4) { const v = a[i]; a[i] = rgb[0]; a[i + 1] = rgb[1]; a[i + 2] = rgb[2]; a[i + 3] = 255 - v; }
+  x.putImageData(id, 0, 0);
+  tintCache.set(key, c);
+  return c;
+}
+
+// ── drawing ─────────────────────────────────────────────────────────────────────────
+let raf = 0;
+function redraw() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+function setT(ctx, A) { ctx.setTransform(A[0], A[3], A[1], A[4], A[2], A[5]); }
+function previewE(g) {
+  if (!sel.has(g.id) || !mode) return g.E;
+  if (mode.kind === "move") return mul(T(mode.dx, mode.dy), g.E);
+  if (mode.kind === "scale") return mul(about([mode.k, 0, 0, mode.k], mode.pt), g.E);
+  return g.E;
+}
+function draw() {
+  if (!S) return;
+  const dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#d6d3cc";
+  ctx.fillRect(0, 0, w, h);
+  const pg = S.pages[cur], [W, H] = pg.size, k = view.s * dpr;
+  const base = [k, 0, view.tx * dpr, 0, k, view.ty * dpr];
+  setT(ctx, base);
+  ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 12 * dpr; ctx.shadowOffsetY = 2 * dpr;
+  const paper = pg.paper || {};
+  const rgb = paper.rgb || [255, 255, 255];
+  ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+  if (paper.kind === "image" && imgs[paper.image]) ctx.drawImage(imgs[paper.image], 0, 0, W, H);
+  for (const g of pages[cur]) {
+    if (g.hidden && !showHidden) continue;
+    const atl = imgs[g.d.sprite.atlas];
+    if (!atl) continue;
+    const pen = penOf(g), [sx, sy, sw, sh] = g.d.sprite.rect;
+    setT(ctx, mul(base, gm(g, previewE(g))));
+    ctx.globalAlpha = (g.hidden ? 0.22 : 1) * (pen.type === "pencil" ? 0.72 : 1) * (pen.ink < 0 ? 1 + 0.45 * pen.ink : 1);
+    ctx.drawImage(tinted(g.d.sprite.atlas, inkRGB(pen)), sx, sy, sw, sh, 0, 0, sw, sh);
+  }
+  ctx.globalAlpha = 1;
+  setT(ctx, base);
+  const lab = S.label || {};
+  if (lab.mode !== "none" && imgs.__label && lab.xy) ctx.drawImage(imgs.__label, lab.xy[0], lab.xy[1]);
+  // overlays
+  const px = 1 / view.s;
+  for (const a of anomalies) {
+    if (a.type !== "gap" || a.page - 1 !== cur) continue;
+    const A = G[a.after], B = G[a.before];
+    if (!A || !B) continue;
+    const ka = gink(A), kb = gink(B);
+    ctx.fillStyle = "rgba(194,65,12,.22)";
+    ctx.fillRect(ka[2], Math.min(ka[1], kb[1]), Math.max(2 * px, kb[0] - ka[2]), Math.max(ka[3], kb[3]) - Math.min(ka[1], kb[1]));
+  }
+  ctx.lineWidth = 1.5 * px;
+  ctx.strokeStyle = "#2f6fde";
+  for (const id of sel) {
+    const g = G[id];
+    if (!g || g.p !== cur) continue;
+    const b = gink(g, previewE(g));
+    ctx.strokeRect(b[0] - 2 * px, b[1] - 2 * px, b[2] - b[0] + 4 * px, b[3] - b[1] + 4 * px);
+  }
+  const sb = selBox(true);
+  if (sb && sel.size) {
+    ctx.fillStyle = "#2f6fde";
+    const hs = 9 * px;
+    ctx.fillRect(sb[2] - hs / 2, sb[3] - hs / 2, hs, hs);
+  }
+  if (mode && mode.kind === "band") {
+    const [x0, y0] = mode.start, [x1, y1] = mode.end;
+    ctx.fillStyle = "rgba(47,111,222,.10)";
+    ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+    ctx.setLineDash([4 * px, 3 * px]);
+    ctx.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+    ctx.setLineDash([]);
+  }
+}
+function selBox(preview) {
+  const bs = [...sel].map((i) => G[i]).filter((g) => g && g.p === cur).map((g) => gink(g, preview ? previewE(g) : g.E));
+  if (!bs.length) return null;
+  return [Math.min(...bs.map((b) => b[0])), Math.min(...bs.map((b) => b[1])), Math.max(...bs.map((b) => b[2])), Math.max(...bs.map((b) => b[3]))];
+}
+
+// ── view ────────────────────────────────────────────────────────────────────────────
+let needFit = true;
+function fit(width) {
+  const r = cv.getBoundingClientRect(), [W, H] = S.pages[cur].size;
+  needFit = r.width < 60 || r.height < 60;            // not laid out yet: fit again on the first real size
+  if (needFit) { redraw(); return; }
+  view.s = width ? (r.width - 40) / W : Math.min((r.width - 40) / W, (r.height - 40) / H);
+  view.s = Math.max(0.02, view.s);
+  view.tx = (r.width - W * view.s) / 2;
+  view.ty = 20;
+  redraw();
+}
+function zoomAt(cx, cy, f) {
+  const s = Math.min(4, Math.max(0.02, view.s * f));
+  const r = cv.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+  view.tx = x - (x - view.tx) * s / view.s;
+  view.ty = y - (y - view.ty) * s / view.s;
+  view.s = s;
+  redraw();
+}
+function toPage(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left - view.tx) / view.s, (ev.clientY - r.top - view.ty) / view.s]; }
+function centerOn(g) {
+  const r = cv.getBoundingClientRect(), b = gink(g);
+  view.tx = r.width / 2 - (b[0] + b[2]) / 2 * view.s;
+  view.ty = r.height / 2 - (b[1] + b[3]) / 2 * view.s;
+}
+function setPage(p) {
+  if (p < 0 || p >= S.pages.length || p === cur) return;
+  cur = p; $("pageSel").value = String(p);
+  fit(false);
+  updatePanel();
+}
+
+// ── hit testing and selection ───────────────────────────────────────────────────────
+function hit(pt) {
+  const gl = pages[cur];
+  for (let i = gl.length - 1; i >= 0; i--) {
+    const g = gl[i];
+    if (g.hidden && !showHidden) continue;
+    const [u, v] = ap(inv(gm(g)), pt[0], pt[1]);
+    if (u >= -3 && v >= -3 && u <= g.sw + 3 && v <= g.sh + 3) return g;
+  }
+  return null;
+}
+function selected() { return [...sel].map((i) => G[i]).filter(Boolean); }
+function selectLines() {
+  const ids = new Set();
+  for (const g of selected()) { const ln = lineOf(g); for (const i of (ln ? ln.glyphs : [g.id])) ids.add(i); }
+  sel = ids; updatePanel(); redraw();
+}
+function lineRefs() {
+  const refs = new Set();
+  for (const g of selected()) if (g.d.line !== null && g.d.line !== undefined) refs.add(`p${g.p}l${g.d.line}`);
+  return [...refs];
+}
+function lineNames() {                               // "第 3、4 行" (several pages: "第 1 页第 3 行、…")
+  const by = new Map();
+  for (const g of selected()) {
+    if (g.d.line === null || g.d.line === undefined) continue;
+    if (!by.has(g.p)) by.set(g.p, new Set());
+    by.get(g.p).add(g.d.line);
+  }
+  if (!by.size) return "";
+  const multi = by.size > 1 || S.pages.length > 1;
+  const parts = [];
+  for (const [p, ls] of [...by.entries()].sort((a, b) => a[0] - b[0])) {
+    const ns = [...ls].sort((a, b) => a - b).map((l) => l + 1);
+    const txt = ns.slice(0, 6).join("、") + (ns.length > 6 ? "…" : "");
+    parts.push((multi ? `第 ${(S.pages[p].index ?? p) + 1} 页` : "") + `第 ${txt} 行`);
+  }
+  return parts.join("；");
+}
+
+// ── edits ───────────────────────────────────────────────────────────────────────────
+function nextBatch() { let b = 0; for (const o of edits) if (Number.isInteger(o.batch) && o.batch > b) b = o.batch; return b + 1; }
+function pushOps(ops) {
+  if (!ops.length) return;
+  const b = nextBatch();
+  for (const o of ops) { const op = { ...o, batch: b, src: "editor" }; edits.push(op); applyOp(op); }
+  redoStack = []; lastNudge = null;
+  afterChange();
+}
+function ids() { return [...sel].filter((i) => G[i]); }
+function nudge(dxmm, dymm) {
+  const list = ids();
+  if (!list.length) return;
+  const key = list.join(","), now = Date.now(), last = edits[edits.length - 1];
+  if (lastNudge && lastNudge.key === key && now - lastNudge.t < 1500 && last === lastNudge.op) {
+    last.dx = r4(last.dx + dxmm); last.dy = r4(last.dy + dymm);
+    const A = T(dxmm * PPM, dymm * PPM);
+    for (const i of list) G[i].E = mul(A, G[i].E);
+    lastNudge.t = now;
+    afterChange();
+    return;
+  }
+  pushOps([{ op: "move", ids: list, dx: r4(dxmm), dy: r4(dymm) }]);
+  lastNudge = { key, t: now, op: edits[edits.length - 1] };
+}
+function undo() {
+  if (!edits.length) return;
+  const key = (o) => Number.isInteger(o.batch) ? o.batch : o;
+  const k0 = key(edits[edits.length - 1]);
+  let i = edits.length;
+  while (i > 0 && key(edits[i - 1]) === k0) i--;
+  redoStack.push(edits.splice(i));
+  lastNudge = null;
+  rebuild(); afterChange();
+  say("已撤销一步。");
+}
+function redo() {
+  const grp = redoStack.pop();
+  if (!grp) return;
+  for (const op of grp) { edits.push(op); applyOp(op); }
+  lastNudge = null;
+  afterChange();
+  say("已重做一步。");
+}
+function steps() { return new Set(edits.map((o, i) => Number.isInteger(o.batch) ? "b" + o.batch : "o" + i)).size; }
+function dirty() { return JSON.stringify(edits) !== savedJSON; }
+function afterChange() {
+  if (anomalies.length) { anomalies = []; $("anoms").innerHTML = ""; $("checkSum").textContent = "内容改过了，请重新检查"; }
+  updateStatus(); updatePanel(); redraw();
+}
+function updateStatus() {
+  const d = dirty(), st = $("status"), n = steps();
+  st.textContent = !n && !d ? "还没有修改" : (n ? `已改 ${n} 步` : "修改已全部撤销") + " · " + (d ? "有未保存的修改" : "已保存");
+  st.className = d ? "dirty" : "";
+  $("undoBtn").disabled = !edits.length;
+  $("redoBtn").disabled = !redoStack.length;
+}
+function updatePanel() {
+  const gl = selected();
+  const info = $("selinfo");
+  if (!gl.length) {
+    info.textContent = "单击选字，拖出方框多选，双击选中整行。";
+    info.className = "muted small";
+  } else {
+    const chars = gl.slice(0, 60).map((g) => g.d.c).join("");
+    const g = gl[0], pen = penOf(g);
+    const lines = lineNames();
+    info.className = "small";
+    info.innerHTML = "";
+    const a = document.createElement("div");
+    a.textContent = `已选 ${gl.length} 个字：${chars}${gl.length > 60 ? "…" : ""}`;
+    const b = document.createElement("div");
+    b.className = "muted";
+    const bits = [];
+    if (gl.length === 1) bits.push(`编号 ${g.id}`, `字高 ${(g.size0 / PPM).toFixed(1)} 毫米`);
+    if (lines) bits.push(lines);
+    bits.push(`笔：${penName(pen)}`);
+    const nh = gl.filter((x) => x.hidden).length;
+    if (nh) bits.push(nh < gl.length ? `其中 ${nh} 个已隐藏` : gl.length === 1 ? "已隐藏" : "都已隐藏");
+    b.textContent = bits.join(" · ");
+    info.append(a, b);
+    $("penType").value = pen.type; $("penColor").value = pen.color;
+    $("penWeight").value = pen.weight; $("penInk").value = pen.ink;
+    $("penWeightV").textContent = pen.weight; $("penInkV").textContent = pen.ink;
+  }
+  const none = !gl.length;
+  for (const id of ["selLine", "selNone", "hideBtn", "showBtn", "smaller", "bigger", "rotL", "rotR", "penSel", "penReset"]) $(id).disabled = none;
+  document.querySelectorAll("[data-nudge]").forEach((b) => { b.disabled = none; });
+}
+function penFromUI() {
+  return normPen({ type: $("penType").value, color: $("penColor").value, weight: +$("penWeight").value, ink: +$("penInk").value });
+}
+
+// ── server ──────────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  let res;
+  try {
+    res = await fetch(path, { method, cache: "no-store",
+      headers: { "Content-Type": "application/json", "X-Inko-Token": TOKEN }, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) {
+    console.warn("editor request failed", path, e);
+    return { status: 0, ok: false, body: { code: "offline" } };
+  }
+  let js = {};
+  try { js = await res.json(); } catch (e) { js = {}; }
+  if (!res.ok) console.warn("editor request", path, res.status, js);
+  return { status: res.status, ok: res.ok, body: js };
+}
+// the message a failed request shows: the page's own Chinese text for the server's code, else the server's (Chinese)
+// message, else one by HTTP status; never the server's English detail
+function errText(r) {
+  const b = r.body || {};
+  if (b.code && ERR_ZH[b.code]) return ERR_ZH[b.code];
+  if (typeof b.error === "string" && /[㐀-鿿]/.test(b.error)) return b.error;
+  if (r.status === 0) return ERR_ZH.offline;
+  if (r.status === 403) return ERR_ZH.bad_token;
+  if (r.status === 404) return ERR_ZH.not_found;
+  if (r.status === 409) return ERR_ZH.conflict;
+  if (r.status >= 500) return ERR_ZH.internal;
+  return ERR_ZH.bad_request;
+}
+function say(text, err) { const m = $("msg"); m.textContent = text || ""; m.className = err ? "err" : ""; }
+async function save() {
+  const r = await api("PUT", "/api/edits", { edits, rev });
+  if (r.status === 409) { say(ERR_ZH.conflict, true); return false; }
+  if (!r.ok) { say("保存失败：" + errText(r), true); return false; }
+  rev = r.body.rev;
+  savedJSON = JSON.stringify(edits);
+  updateStatus();
+  say("已保存。改完了就回到对话里告诉 AI。");
+  return true;
+}
+async function exportPages() {
+  if (dirty() && !(await save())) return;
+  say("正在按真实的笔效果导出…");
+  $("exportBtn").disabled = true;
+  try {
+    const r = await api("POST", "/api/render", { pdf: true, format: "png" });
+    if (!r.ok) { say("导出失败：" + errText(r), true); return; }
+    const files = r.body.pages.map((p) => p.file);
+    if (r.body.pdf) files.push(r.body.pdf);
+    const base = (f) => String(f).split(/[\\/]/).pop();
+    say(`已导出 ${files.map(base).join("、")}（带 AI 标识和元数据），保存在：\n${r.body.out || ""}`);
+  } finally { $("exportBtn").disabled = false; }
+}
+async function compute(cmd, params, scope) {       // scope: which lines it applied to, said in the message
+  const name = (CMD_ZH[cmd] || cmd) + (scope ? `（${scope}）` : "");
+  const r = await api("POST", "/api/compute", { edits, cmd, params });
+  if (!r.ok) { say(`${name}没能完成：` + errText(r), true); return; }
+  const ops = r.body.ops || [];
+  if (!ops.filter((o) => o.op !== "note").length) { say(`${name}：没有需要调整的地方。`); return; }
+  pushOps(ops);
+  const moves = ops.filter((o) => o.op === "move" && Array.isArray(o.ids));
+  const moved = new Set();
+  for (const o of moves) o.ids.forEach((i) => moved.add(i));
+  const what = cmd === "drift" ? `${moves.length} 行` : `${moved.size} 个字`;      // a drift op moves one whole line
+  say(`${name}：调整了 ${what}。点「撤销」可以一步退回。`);
+}
+async function check() {
+  $("checkSum").textContent = "检查中…";
+  const r = await api("POST", "/api/inspect", { edits, max_gap: +$("maxGap").value || 0.35 });
+  if (!r.ok) { $("checkSum").textContent = ""; say("检查没能完成：" + errText(r), true); return; }
+  anomalies = r.body.anomalies || [];
+  const c = r.body.counts || {};
+  $("checkSum").textContent = anomalies.length ? Object.entries(c).map(([k, v]) => `${TYPE_ZH[k] || k} ${v} 处`).join(" · ") : "没有发现问题";
+  const box = $("anoms");
+  box.innerHTML = "";
+  for (const a of anomalies.slice(0, 200)) {
+    const d = document.createElement("div");
+    d.className = "anom";
+    d.title = "点一下，选中并定位到这里";
+    const t = document.createElement("b");
+    t.textContent = TYPE_ZH[a.type] || a.type;
+    const s = document.createElement("span");
+    s.textContent = (S.pages.length > 1 ? `第 ${a.page} 页 · ` : "") + describe(a);
+    d.append(t, s);
+    d.onclick = () => {
+      const list = a.ids || [a.after, a.before, a.id].filter(Boolean);
+      const gs = list.map((i) => G[i]).filter(Boolean);
+      if (!gs.length) return;
+      if (gs[0].p !== cur) setPage(gs[0].p);
+      sel = new Set(gs.map((g) => g.id));
+      centerOn(gs[0]);
+      updatePanel(); redraw();
+    };
+    box.append(d);
+  }
+  if (anomalies.length > 200) {
+    const more = document.createElement("div");
+    more.className = "small muted";
+    more.textContent = `只列出前 200 处，共 ${anomalies.length} 处。`;
+    box.append(more);
+  }
+  redraw();
+}
+function q(c) { return `「${c}」`; }
+function pair(chars) {
+  const s = String(chars || "").split("|");
+  return s.length === 2 ? `${q(s[0])}和${q(s[1])}` : q(chars);
+}
+function describe(a) {
+  switch (a.type) {
+    case "gap": return `${pair(a.chars)}之间空了 ${a.gap_mm} 毫米，是字高的 ${a.gap_size} 倍（正常约 ${a.natural_size} 倍）`;
+    case "stroke": return `${q(a.c)}笔画宽 ${a.width_mm} 毫米，一般是 ${a.typical_mm} 毫米，${a.ratio > 1 ? "偏粗" : "偏细"}`;
+    case "overlap": return `${pair(a.chars)}重叠了 ${Math.round(a.overlap * 100)}%`;
+    case "hidden": return `${a.ids.length} 个字：${a.chars}`;
+    case "off_paper": return `${q(a.c)}跑到了纸外面`;
+    case "near_edge": return `${q(a.c)}离纸边不到 5 毫米`;
+    case "under_label": return `${q(a.c)}压在了 AI 标识上`;
+    case "outside_margin": {
+      const why = /margin line/.test(a.why || "") ? "越过了页边红线" : "超出了原来的版心";
+      return `${q(a.c)}向${a.side === "left" ? "左" : "右"}${why} ${a.by_mm} 毫米`;
+    }
+    default: return a.c || a.chars || "";
+  }
+}
+
+// ── input ───────────────────────────────────────────────────────────────────────────
+cv.addEventListener("pointerdown", (ev) => {
+  if (!S) return;
+  cv.setPointerCapture(ev.pointerId);
+  const pt = toPage(ev);
+  if (ev.button === 1 || (ev.button === 0 && spaceDown)) {
+    mode = { kind: "pan", x: ev.clientX, y: ev.clientY, tx: view.tx, ty: view.ty };
+    return;
+  }
+  if (ev.button !== 0) return;
+  const add = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+  const sb = selBox(false);
+  if (sb && !add && Math.abs(pt[0] - sb[2]) <= 9 / view.s && Math.abs(pt[1] - sb[3]) <= 9 / view.s) {
+    mode = { kind: "scale", pt: [sb[0], sb[1]], k: 1, d0: Math.max(1, Math.hypot(pt[0] - sb[0], pt[1] - sb[1])) };
+    return;
+  }
+  const g = hit(pt);
+  if (g) {
+    if (add) {
+      if (sel.has(g.id)) sel.delete(g.id); else sel.add(g.id);
+      mode = null; updatePanel(); redraw();
+      return;
+    }
+    if (!sel.has(g.id)) { sel = new Set([g.id]); updatePanel(); }
+    mode = { kind: "move", start: pt, dx: 0, dy: 0, moved: false };
+  } else {
+    if (!add) sel.clear();
+    mode = { kind: "band", start: pt, end: pt };
+    updatePanel();
+  }
+  redraw();
+});
+cv.addEventListener("pointermove", (ev) => {
+  if (!S) return;
+  const pt = toPage(ev);
+  if (!mode) {
+    const sb = selBox(false);
+    const onHandle = sb && Math.abs(pt[0] - sb[2]) <= 9 / view.s && Math.abs(pt[1] - sb[3]) <= 9 / view.s;
+    cv.style.cursor = spaceDown ? "grab" : onHandle ? "nwse-resize" : hit(pt) ? "move" : "default";
+    return;
+  }
+  if (mode.kind === "pan") { view.tx = mode.tx + ev.clientX - mode.x; view.ty = mode.ty + ev.clientY - mode.y; }
+  else if (mode.kind === "move") {
+    mode.dx = pt[0] - mode.start[0]; mode.dy = pt[1] - mode.start[1];
+    if (Math.hypot(mode.dx, mode.dy) * view.s > 2) mode.moved = true;
+  } else if (mode.kind === "scale") {
+    mode.k = Math.min(5, Math.max(0.2, Math.hypot(pt[0] - mode.pt[0], pt[1] - mode.pt[1]) / mode.d0));
+  } else if (mode.kind === "band") mode.end = pt;
+  redraw();
+});
+function endPointer() {
+  if (!mode) return;
+  const m = mode;
+  mode = null;
+  if (m.kind === "move" && m.moved) {
+    pushOps([{ op: "move", ids: ids(), dx: r4(m.dx / PPM), dy: r4(m.dy / PPM) }]);
+  } else if (m.kind === "scale" && Math.abs(m.k - 1) > 0.004) {
+    pushOps([{ op: "scale", ids: ids(), k: r4(m.k), about: [r4(m.pt[0]), r4(m.pt[1])] }]);
+  } else if (m.kind === "band") {
+    const x0 = Math.min(m.start[0], m.end[0]), x1 = Math.max(m.start[0], m.end[0]);
+    const y0 = Math.min(m.start[1], m.end[1]), y1 = Math.max(m.start[1], m.end[1]);
+    if (x1 - x0 > 2 || y1 - y0 > 2) {
+      for (const g of pages[cur]) {
+        if (g.hidden && !showHidden) continue;
+        const b = gink(g), cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+        if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) sel.add(g.id);
+      }
+    }
+    updatePanel();
+  }
+  redraw();
+}
+cv.addEventListener("pointerup", endPointer);
+cv.addEventListener("pointercancel", () => { mode = null; redraw(); });
+cv.addEventListener("dblclick", (ev) => {
+  const g = hit(toPage(ev));
+  if (!g) return;
+  sel = new Set([g.id]);
+  selectLines();
+});
+cv.addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  if (ev.ctrlKey || ev.metaKey) zoomAt(ev.clientX, ev.clientY, Math.exp(-ev.deltaY * 0.0015));
+  else {
+    view.tx -= ev.shiftKey ? ev.deltaY : ev.deltaX;
+    view.ty -= ev.shiftKey ? 0 : ev.deltaY;
+    redraw();
+  }
+}, { passive: false });
+cv.addEventListener("contextmenu", (ev) => ev.preventDefault());
+
+window.addEventListener("keydown", (ev) => {
+  if (!S) return;
+  const tag = (ev.target && ev.target.tagName) || "";
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(tag)) return;
+  const ctrl = ev.ctrlKey || ev.metaKey, step = +$("step").value * (ev.shiftKey ? 5 : 1);
+  const k = ev.key;
+  if (k === " ") { spaceDown = true; cv.style.cursor = "grab"; ev.preventDefault(); return; }
+  if (ctrl && (k === "z" || k === "Z")) { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); return; }
+  if (ctrl && (k === "y" || k === "Y")) { ev.preventDefault(); redo(); return; }
+  if (ctrl && (k === "s" || k === "S")) { ev.preventDefault(); save(); return; }
+  if (ctrl && (k === "a" || k === "A")) { ev.preventDefault(); sel = new Set(pages[cur].filter((g) => !g.hidden || showHidden).map((g) => g.id)); updatePanel(); redraw(); return; }
+  if (k === "PageDown") { ev.preventDefault(); setPage(cur + 1); return; }
+  if (k === "PageUp") { ev.preventDefault(); setPage(cur - 1); return; }
+  if (k === "Escape") { sel.clear(); updatePanel(); redraw(); return; }
+  if (ctrl) return;
+  const n = ids();
+  if (k === "l" || k === "L") { if (n.length) selectLines(); return; }
+  if (!n.length) return;
+  const moves = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  if (moves[k]) { ev.preventDefault(); nudge(moves[k][0] * step, moves[k][1] * step); return; }
+  if (k === "+" || k === "=") { pushOps([{ op: "scale", ids: n, k: 1.02, about: "anchor" }]); return; }
+  if (k === "-" || k === "_") { pushOps([{ op: "scale", ids: n, k: 0.98, about: "anchor" }]); return; }
+  if (k === "[") { pushOps([{ op: "rotate", ids: n, deg: -0.5, about: "anchor" }]); return; }
+  if (k === "]") { pushOps([{ op: "rotate", ids: n, deg: 0.5, about: "anchor" }]); return; }
+  if (k === "Delete" || k === "Backspace") { ev.preventDefault(); pushOps([{ op: "hide", ids: n }]); }
+});
+window.addEventListener("keyup", (ev) => { if (ev.key === " ") { spaceDown = false; cv.style.cursor = "default"; } });
+window.addEventListener("beforeunload", (ev) => { if (S && dirty()) { ev.preventDefault(); ev.returnValue = ""; } });
+new ResizeObserver(() => { if (S && needFit) fit(false); else redraw(); }).observe($("view"));
+
+// buttons
+$("pageSel").onchange = () => setPage(+$("pageSel").value);
+$("zoomIn").onclick = () => { const r = cv.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25); };
+$("zoomOut").onclick = () => { const r = cv.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 0.8); };
+$("zoomFit").onclick = () => fit(false);
+$("zoomWidth").onclick = () => fit(true);
+$("undoBtn").onclick = undo;
+$("redoBtn").onclick = redo;
+$("saveBtn").onclick = save;
+$("exportBtn").onclick = exportPages;
+$("selLine").onclick = selectLines;
+$("selAll").onclick = () => { sel = new Set(pages[cur].filter((g) => !g.hidden || showHidden).map((g) => g.id)); updatePanel(); redraw(); };
+$("selNone").onclick = () => { sel.clear(); updatePanel(); redraw(); };
+$("hideBtn").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "hide", ids: n }]); };
+$("showBtn").onclick = () => { const n = ids().filter((i) => G[i].hidden); if (n.length) pushOps([{ op: "show", ids: n }]); };
+$("showHidden").onchange = () => { showHidden = $("showHidden").checked; redraw(); };
+document.querySelectorAll("[data-nudge]").forEach((b) => {
+  b.onclick = () => { const [x, y] = b.dataset.nudge.split(",").map(Number), st = +$("step").value; nudge(x * st, y * st); };
+});
+$("smaller").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "scale", ids: n, k: 0.98, about: "anchor" }]); };
+$("bigger").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "scale", ids: n, k: 1.02, about: "anchor" }]); };
+$("rotL").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "rotate", ids: n, deg: -0.5, about: "anchor" }]); };
+$("rotR").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "rotate", ids: n, deg: 0.5, about: "anchor" }]); };
+$("penWeight").oninput = () => { $("penWeightV").textContent = $("penWeight").value; };
+$("penInk").oninput = () => { $("penInkV").textContent = $("penInk").value; };
+$("penType").onchange = () => { if ($("penType").value === "pencil") $("penColor").value = "black"; };
+$("penSel").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "pen", ids: n, pen: penFromUI() }]); };
+$("penAll").onclick = () => pushOps([{ op: "pen", ids: "all", pen: penFromUI() }]);
+$("penReset").onclick = () => { const n = ids(); if (n.length) pushOps([{ op: "pen", ids: n, pen: null }]); };
+const scopeName = () => (lineRefs().length ? lineNames() : "全部行");
+$("tightenBtn").onclick = () => compute("tighten", { lines: lineRefs().length ? lineRefs() : "all", max_gap: +$("maxGap").value || 0.35 }, scopeName());
+$("driftBtn").onclick = () => compute("drift", { mode: $("driftMode").value });
+$("alignBtn").onclick = () => compute("align-baseline", { lines: lineRefs().length ? lineRefs() : "all" }, scopeName());
+$("checkBtn").onclick = check;
+
+// ── start ───────────────────────────────────────────────────────────────────────────
+async function getJSON(path) {
+  let res;
+  try { res = await fetch(path, { cache: "no-store" }); } catch (e) { throw new Error(ERR_ZH.offline); }
+  if (!res.ok) throw new Error(errText({ status: res.status, body: await res.json().catch(() => ({})) }));
+  return res.json();
+}
+(async function start() {
+  try {
+    S = await getJSON("/pkg/scene.json");
+    PPM = S.px_per_mm || 300 / 25.4;
+    const e = await getJSON("/api/edits");
+    edits = e.edits || []; rev = e.rev; savedJSON = JSON.stringify(edits);
+    const want = new Set();
+    for (const pg of S.pages) {
+      for (const g of pg.glyphs || []) want.add(g.sprite.atlas);
+      if (pg.paper && pg.paper.kind === "image" && pg.paper.image) want.add(pg.paper.image);
+    }
+    await Promise.all([...want].map(async (rel) => { imgs[rel] = await loadImg(rel); }));
+    if (S.label && S.label.image && S.label.mode !== "none") imgs.__label = await loadImg(S.label.image);
+    rebuild();
+    const ps = $("pageSel");
+    S.pages.forEach((pg, p) => { const o = document.createElement("option"); o.value = String(p); o.textContent = `第 ${(pg.index ?? p) + 1} 页 / 共 ${S.pages.length} 页`; ps.append(o); });
+    if (S.label && S.label.mode === "none") {
+      $("hint").textContent = "预览只显示墨色；笔的质感和粗细在导出时才加上。（这份任务生成时没有显式标识。）";
+      $("labelNote").textContent = "每次导出都会带上 AIGC 元数据。";
+    }
+    fit(false);
+    afterChange();
+  } catch (err) {
+    console.error(err);
+    S = null;
+    document.querySelectorAll("button, select, input").forEach((e) => { e.disabled = true; });   // nothing to edit
+    $("status").textContent = "加载失败";
+    const m = err && err.message;
+    say(m && /[㐀-鿿]/.test(m) ? m : "笔迹包读取失败，请刷新页面重试。", true);
+  }
+})();
+</script>
+</body>
+</html>

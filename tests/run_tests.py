@@ -245,6 +245,57 @@ def main() -> int:
         assert e["boxes"][0]["kind"] == "rect" and e["boxes"][0]["block"] == "B_Q1"
         assert (e["marks"][0]["start"], e["marks"][0]["end"]) == (6, 9) and (e["marks"][1]["start"], e["marks"][1]["end"]) == (8, 9)
 
+    @test("inko.py says which handwriting a job uses (常用字迹 first, fallback explained)")
+    def _():
+        import inko
+        base = {"ok": True, "chars": 12, "price": {"list_cents": 20}}
+        q = inko._summarize_quote({**base, "style": {"ref": "37", "label": "No.037", "source": "default"}})
+        assert q["style"]["source"] == "default" and "常用字迹 No.037" in inko.style_hint(q)
+        q = inko._summarize_quote({**base, "style": {"ref": "1", "label": "No.001", "source": "system"},
+                                   "style_note": "常用字迹「我的字」是专属字迹,Inko Logic 1 暂不支持专属字迹,这次用了系统默认的 No.001"})
+        h = inko.style_hint(q)
+        assert q["style_note"] in h and "--favorites" in h and "casual" in h, h
+        assert "hasn't set one" in inko.style_hint(inko._summarize_quote({**base, "style": {"ref": "5", "label": "No.005", "source": "system"}}))
+        assert "on purpose" in inko.style_hint(inko._summarize_quote(base))           # an older API without `style` in the quote
+        h = run(S / "inko.py", "default-style", "--help")["_stdout"]
+        assert "--clear" in h and "常用字迹" in h, h
+
+    @test("inko.py prices ¥0.002 / char (min 100 chars), pays from the balance only (older servers' quota still handled)")
+    def _():
+        import re
+        import inko
+        assert [inko.price_cents(n) for n in (0, 12, 100, 101, 812, 1000)] == [20, 20, 20, 21, 163, 200]
+        # current servers: pure pay-as-you-go; quota_cents / quota_pages are 0 and membership is null (legacy keys)
+        acc = {"balance_cents": 500, "quota_cents": 0, "quota_pages": 0, "membership": None}
+        p = inko.payment(812, 0, acc)                                                         # no list price given: computed here
+        assert p == "¥1.63 from the balance (¥5.00 available, ¥3.37 left after this job)", p
+        p = inko.payment(812, 163, {**acc, "balance_cents": 100})
+        assert p == "¥1.63 from the balance, but only ¥1.00 is available: the user must top up at least ¥0.63 on inkotype.com first", p
+        assert inko.payment(12, 20, None) == "¥0.20 from the balance"                        # no account in the quote
+        q = inko._summarize_quote({"ok": True, "chars": 12, "account": {"balance_cents": 1000, "quota_cents": 0, "quota_pages": 0},
+                                   "price": {"units": "chars", "amount": 12, "billed_chars": 100, "min_chars": 100, "list_cents": 20}})
+        assert q["price_cny"] == 0.2 and q["list_cents"] == 20, q
+        assert q["payment"] == "¥0.20 from the balance (¥10.00 available, ¥9.80 left after this job)", q
+        assert not re.search(r"quota|member|page|页|额度|会员", q["payment"]), q["payment"]
+        assert inko._money(acc) == {"balance_cents": 500}
+        assert inko._money({**acc, "can_remove_label": True}) == {"balance_cents": 500, "can_remove_label": True}
+        # older servers still had a quota (membership / new-user gift), used before the balance at the same price
+        assert inko.quota_cents({"quota_cents": 280, "quota_pages": 2.8}) == 280
+        assert inko.quota_cents({"quota_pages": 2.8}) == 280 and inko.quota_cents({}) == 0 and inko.quota_cents(None) == 0
+        p = inko.payment(12, 20, {"balance_cents": 0, "quota_cents": 300})
+        assert p == "¥0.20 of quota (¥2.80 quota left after this job); balance untouched", p
+        p = inko.payment(1500, 300, {"balance_cents": 500, "quota_pages": 2.8})              # even older: quota_pages only
+        assert p == "all ¥2.80 remaining quota + ¥0.20 from the balance (¥5.00 available, ¥4.80 left after this job)", p
+        assert inko._money({"balance_cents": 0, "quota_pages": 2.8}) == {"balance_cents": 0, "quota_cents": 280}
+        # hints and help: no membership / subscription any more; label:none = a custom-handwriting seat + the agreement
+        assert not any(re.search(r"member|subscri|会员|额度", h, re.I) for k, h in inko.HINTS.items() if k != "insufficient_balance")
+        assert "top up" in inko.HINTS["insufficient_balance"] and "no membership" in inko.HINTS["insufficient_balance"]
+        assert "seat" in inko.HINTS["label_required"] and "agreement" in inko.HINTS["label_required"]
+        assert "pricing#topup" in inko.HINTS["insufficient_balance"] and "seat" in inko.HINTS["no_slot"]
+        assert inko.payment(12, 20, {"quota_cents": 5}) == "all ¥0.05 remaining quota + ¥0.15 from the balance"     # older server, no balance field
+        h = run(S / "inko.py", "generate", "--help")["_stdout"]
+        assert "custom-handwriting seat" in re.sub(r"-\s+", "-", re.sub(r"\s+", " ", h)), h     # argparse may wrap at a hyphen
+
     @test("inko.py catches swallowed LaTeX backslashes")
     def _():
         bad = OUT / "bad.txt"
@@ -262,6 +313,39 @@ def main() -> int:
             lay = run(S / "inko.py", "layout", "--spec", ROOT / "inko-handwriting" / "assets" / "layouts" / "letter.json", "--model", "lyric-1",
                       "--preview", OUT / "letter-preview.png")
             assert lay["pages"] == 1 and lay["unplaced"] == 0, lay
+
+        @test("online: 常用字迹 and favourites (puts the account's setting back)")
+        def _():
+            before = run(S / "inko.py", "default-style")
+            assert "default_style" in before and isinstance(before.get("favorites"), list), before
+            prev = (before.get("default_style") or {}).get("ref")
+            code = next(s["style"] for s in run(S / "inko.py", "styles", "--model", "lyric-1", "--kind", "preset", "--limit", "50")["styles"]
+                        if s["style"] != prev)
+            try:
+                r = run(S / "inko.py", "default-style", code)
+                assert r["default_style"]["ref"] == code and "lyric-1" in r["default_style"]["models"], r
+                q = run(S / "inko.py", "quote", "--text", "春眠不觉晓，处处闻啼鸟。", "--model", "lyric-1")
+                assert q["style"] == {"ref": code, "label": f"No.{int(code):03d}", "source": "default"} and "常用字迹" in q["style_hint"], q
+                q = run(S / "inko.py", "quote", "--text", "春眠不觉晓，处处闻啼鸟。", "--model", "lyric-1", "--style", "2")
+                assert q["style"]["source"] == "request" and "style_hint" not in q, q
+                st = run(S / "inko.py", "styles", "--model", "lyric-1", "--limit", "3")
+                assert st["styles"][0]["style"] == code and st["styles"][0].get("default") is True, st["styles"][0]
+                fav = run(S / "inko.py", "styles", "--favorites")
+                assert all(s.get("favorite") for s in fav["styles"]) and fav["count"] == len(before["favorites"]), fav
+            finally:
+                run(S / "inko.py", "default-style", *([prev] if prev else ["--clear"]))
+            assert (run(S / "inko.py", "default-style").get("default_style") or {}).get("ref") == prev
+
+    for name in ("test_math_style.py", "test_drift.py", "test_scene.py"):      # separate suites (own fixtures), same pass/fail
+        if not (HERE / name).exists():
+            continue
+
+        @test(f"suite {name}" + (" (--online)" if online else ""))
+        def _(name=name):
+            r = subprocess.run([sys.executable, str(HERE / name), *(["--online"] if online else [])], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+            tail = "\n".join((r.stdout or "").strip().splitlines()[-12:])
+            assert r.returncode == 0, f"{name} failed:\n{tail}\n{(r.stderr or '')[-800:]}"
 
     width = max(len(n) for n, _, _ in RESULTS)
     fails = 0
