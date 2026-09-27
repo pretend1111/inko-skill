@@ -105,6 +105,31 @@ class ApiError(Exception):
         self.status, self.code, self.message, self.request_id, self.retry_after = status, code, message, request_id, retry_after
 
 
+# Many machines in China run a local proxy (HTTPS_PROXY=127.0.0.1:7890 …) that breaks TLS to Inko's Hong Kong servers
+# (SSL: UNEXPECTED_EOF). When a request through the proxy fails at the network level, retry it directly and keep doing so.
+_DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+_use_direct = False
+
+
+def _urlopen(req, timeout: float):
+    return _DIRECT.open(req, timeout=timeout) if _use_direct else urllib.request.urlopen(req, timeout=timeout)
+
+
+def _proxy_fallback(url: str) -> bool:
+    """Switch to direct connections once, if a proxy would be used for this URL. True if switched."""
+    global _use_direct
+    if _use_direct:
+        return False
+    host = urllib.parse.urlparse(url).hostname or ""
+    proxies = urllib.request.getproxies()
+    if not (proxies.get("https") or proxies.get("http")) or urllib.request.proxy_bypass(host):
+        return False
+    _use_direct = True
+    note(f"… the proxy ({proxies.get('https') or proxies.get('http')}) failed to reach {host}; retrying without it "
+         f"(set NO_PROXY={host} to skip the proxy from the start)")
+    return True
+
+
 def call(method: str, path: str, body=None, *, auth: bool = True, headers: dict | None = None, retries: int = 4, timeout: float = 60):
     url = path if path.startswith("http") else base_url() + path
     h = {"User-Agent": UA, "Accept": "application/json"}
@@ -118,7 +143,7 @@ def call(method: str, path: str, body=None, *, auth: bool = True, headers: dict 
     for attempt in range(retries + 1):
         req = urllib.request.Request(url, data=data, headers=h, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with _urlopen(req, timeout) as r:
                 raw = r.read()
                 return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:
@@ -142,6 +167,8 @@ def call(method: str, path: str, body=None, *, auth: bool = True, headers: dict 
             raise ae
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             if attempt < retries:
+                if _proxy_fallback(url):
+                    continue
                 note(f"… network error ({e.__class__.__name__}: {str(e)[:80]}), retrying in {delay:.0f}s")
                 time.sleep(delay)
                 delay = min(delay * 2, 30)
@@ -364,7 +391,7 @@ def _download(url: str, path: Path, timeout: float = 180) -> Path:
     for attempt in range(4):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=timeout) as r, open(path, "wb") as f:
+            with _urlopen(req, timeout) as r, open(path, "wb") as f:
                 while True:
                     b = r.read(1 << 16)
                     if not b:
@@ -377,6 +404,8 @@ def _download(url: str, path: Path, timeout: float = 180) -> Path:
             last = e
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             last = e
+            if _proxy_fallback(url):
+                continue
         time.sleep(2 * (attempt + 1))
     raise ApiError(0, "network", f"download failed: {last}")
 

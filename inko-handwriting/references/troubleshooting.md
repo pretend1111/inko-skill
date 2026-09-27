@@ -24,7 +24,7 @@ Scripts print `error: …` on stderr. Start with `python scripts/inko.py doctor`
 | `not_cancelable` (409) | job already finished | — |
 | `link_expired` (404) | download link older than 24 h | `inko.py download ID` fetches fresh links |
 | `files_expired` | results older than 30 days are deleted | regenerate |
-| `network` | no connection / proxy / TLS (e.g. repeated `SSL: UNEXPECTED_EOF`) | inko.py retries transient errors; if it keeps failing through a local proxy, try without it: `NO_PROXY=inkotype.com` (or fix `HTTPS_PROXY`) |
+| `network` | no connection / proxy / TLS (e.g. repeated `SSL: UNEXPECTED_EOF`) | inko.py retries transient errors and, when a local proxy (`HTTPS_PROXY=127.0.0.1:7890` …) breaks the connection, switches to a direct connection by itself (it says so). Still failing: check the internet connection; `NO_PROXY=inkotype.com,api.inkotype.com` skips the proxy from the start |
 | `wait_timeout` | job still running after `--timeout` | `inko.py wait ID` later — the job keeps running |
 
 Failed jobs are refunded automatically; say so when reporting a failure.
