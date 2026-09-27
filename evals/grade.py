@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""Grade one eval run: python evals/grade.py <run_dir> <eval_name>  →  <run_dir>/grading.json
+
+run_dir is …/iteration-N/eval-<name>/<with_skill|without_skill>; checks look at run_dir/outputs. The checks are about
+outcomes, not about which tools were used, so runs without the skill are graded the same way.
+"""
+from __future__ import annotations
+
+import sys
+sys.dont_write_bytecode = True
+
+import json
+import re
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "inko-handwriting" / "scripts"))
+
+import numpy as np  # noqa: E402
+
+from _common import Image, find_label_bbox, label_box, read_meta  # noqa: E402
+
+FILES = HERE / "files"
+SKIP = ("check", "test", "scratch", "_inspect", "variant", "candidate", "draft")
+
+
+def _json_files(out: Path):
+    for p in out.rglob("*.json"):
+        try:
+            yield p, json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+
+
+def jobs(out: Path) -> list[dict]:
+    seen, res = set(), []
+    for _, j in _json_files(out):
+        for cand in ([j] if isinstance(j, dict) else []) + (j.get("jobs", []) if isinstance(j, dict) and isinstance(j.get("jobs"), list) else []):
+            if isinstance(cand, dict) and cand.get("status") == "succeeded" and cand.get("model") in ("logic-1", "lyric-1") and cand.get("id") not in seen:
+                seen.add(cand.get("id"))
+                res.append(cand)
+    return res
+
+
+def _texts_of(obj, depth: int = 0) -> list[str]:
+    """Texts sent to Inko anywhere inside a JSON object (request bodies, layouts incl. box texts, wrappers like
+    {"request": …}); the caller keeps only those matching a job's text_preview."""
+    out: list[str] = []
+    if depth > 6:
+        return out
+    if isinstance(obj, dict):
+        if isinstance(obj.get("text"), str):
+            extra = [str(b.get("text", "") or b.get("own", "")) for b in obj.get("boxes", []) if isinstance(b, dict)]
+            out.append(obj["text"] + ("\n" + "\n".join(extra) if extra else ""))
+        for v in obj.values():
+            if isinstance(v, (dict, list)):
+                out += _texts_of(v, depth + 1)
+    elif isinstance(obj, list):
+        for v in obj[:200]:
+            out += _texts_of(v, depth + 1)
+    return out
+
+
+def submitted_text(out: Path) -> str:
+    """The text of the delivered job(s): candidates whose beginning matches a succeeded job's text_preview win."""
+    previews = [re.sub(r"\s", "", (j.get("text_preview") or ""))[:30] for j in jobs(out)]
+    cands: list[str] = []
+    for p in out.rglob("*"):
+        if not p.is_file() or p.stat().st_size > 2_000_000:
+            continue
+        if p.suffix.lower() == ".txt":
+            try:
+                cands.append(p.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                pass
+        elif p.suffix.lower() == ".json":
+            try:
+                cands += _texts_of(json.loads(p.read_text(encoding="utf-8")))
+            except Exception:  # noqa: BLE001
+                pass
+    hits = [c for c in cands if any(pv and re.sub(r"\s", "", c).startswith(pv[:24]) for pv in previews)]
+    return "\n".join(hits) if hits else ""
+
+
+def images(out: Path, exts=(".png", ".jpg", ".jpeg", ".webp")) -> list[Path]:
+    """Delivered images: the ones at the top of the outputs folder (sub-folders hold raw pages, crops, experiments)."""
+    skip = ("overlay", "check", "preview", "contact", "-flat", "card", "style-", "notebook_photo") + SKIP
+    return [p for p in out.iterdir() if p.is_file() and p.suffix.lower() in exts and not any(s in p.name.lower() for s in skip)]
+
+
+def has_label(p: Path) -> bool:
+    im = Image.open(p).convert("RGB")
+    if find_label_bbox(np.asarray(im)):
+        return True
+    for c in ("br", "bl", "tr", "tl"):                     # re-applied labels may be light-on-dark
+        x0, y0, x1, y1 = label_box(im.size, where=c)
+        reg = np.asarray(im.convert("L").crop((x0, y0, x1, y1)), np.float32)
+        if reg.size and reg.std() > 18 and (np.abs(reg - np.median(reg)) > 60).mean() > 0.04:
+            return True
+    return False
+
+
+def exp(text: str, passed: bool, evidence: str) -> dict:
+    return {"text": text, "passed": bool(passed), "evidence": evidence}
+
+
+def paper_ids(out: Path) -> list[str]:
+    ids = []
+    for _, j in _json_files(out):
+        if isinstance(j, dict):
+            lay = j.get("layout") if isinstance(j.get("layout"), dict) else j
+            if isinstance(lay.get("paperId"), str):
+                ids.append(lay["paperId"])
+    return ids
+
+
+def grade_math(out: Path) -> list[dict]:
+    js, sub, imgs = jobs(out), submitted_text(out), images(out)
+    final = [p for p in imgs if p.suffix.lower() in (".png", ".jpg", ".jpeg")]
+    E = [exp("A handwritten image deliverable exists", bool(final), ", ".join(p.name for p in final[:4]) or "none")]
+    E.append(exp("Generated by the Inko API (a succeeded job)", bool(js), f"{len(js)} succeeded job(s)"))
+    E.append(exp("Used the math model logic-1", any(j["model"] == "logic-1" for j in js), str([j.get("model") for j in js])))
+    t = sub.replace(" ", "").replace("\\,", "")
+    ok1 = bool(re.search(r"x_?\{?1\}?=2", t) and re.search(r"x_?\{?2\}?=3", t)) or ("x=2" in t and "x=3" in t)
+    ok2 = bool(re.search(r"=-3(?![0-9])", t))
+    ok3 = "40" in t and "5" in t and "8" in t
+    E.append(exp("All three answers correct (x=2,3; -3; area 40 cm²)", ok1 and ok2 and ok3, f"q1={ok1} q2={ok2} q3={ok3}"))
+    E.append(exp("Student-style solution (解… and a final 答 for the word problem)", "解" in sub and "答" in sub, f"解={'解' in sub} 答={'答' in sub}"))
+    ids = paper_ids(out)
+    E.append(exp("Exercise-book look (ruled paper)", any(i.startswith("ruled") for i in ids), str(sorted(set(ids)))))
+    lab = [p.name for p in final if has_label(p)]
+    E.append(exp("Visible AI label intact on every delivered image", bool(final) and len(lab) == len(final), f"{len(lab)}/{len(final)}"))
+    meta = [p.name for p in final if (read_meta(Image.open(p)) or {}).get("aigc")]
+    E.append(exp("AIGC metadata kept on every delivered image", bool(final) and len(meta) == len(final), f"{len(meta)}/{len(final)}"))
+    cost = sum((j.get("cost_cents") or 0) for j in js)
+    quota = sum((j.get("quota_pages") or 0) for j in js)
+    E.append(exp("Stayed within the ¥3 budget", cost + quota * 90 <= 300, f"cost_cents={cost}, quota_pages={round(quota, 2)}"))
+    return E
+
+
+def _truth_paper() -> dict:
+    cache = FILES / "notebook_photo.truth.json"
+    if not cache.exists():
+        import subprocess
+        subprocess.run([sys.executable, str(HERE.parent / "inko-handwriting" / "scripts" / "paper.py"), "analyze", str(FILES / "notebook_photo.jpg"),
+                        "-o", str(cache), "--overlay", ""], check=True, capture_output=True)
+    return json.loads(cache.read_text(encoding="utf-8"))
+
+
+def grade_paper(out: Path) -> list[dict]:
+    src = Image.open(FILES / "notebook_photo.jpg").convert("RGB")
+    imgs = [p for p in images(out) if Image.open(p).size == src.size and p.name != "notebook_photo.jpg"]
+    E = [exp("Final image is the user's own photo (same size) with writing on it", bool(imgs), ", ".join(p.name for p in imgs[:3]) or "none")]
+    js = jobs(out)
+    E.append(exp("Generated by the Inko API (a succeeded job)", bool(js), f"{len(js)} job(s)"))
+    if not imgs:
+        return E + [exp(t, False, "no final image") for t in ("Lines 1–3 untouched", "Writing starts on line 4", "Writing sits on the lines",
+                                                              "Blue ink", "Whole diary written", "Visible AI label + AIGC metadata")]
+    from paper import apply_h
+    pj = _truth_paper()
+    fin = np.asarray(Image.open(imgs[0]).convert("RGB"), np.float32)
+    a = np.asarray(src, np.float32)
+    diff = np.abs(fin - a).max(2) > 40
+    xm = pj["image_px"][0] / 2
+    ys = [apply_h(pj["flat_to_source"], xm, ln["poly"][0] + ln["poly"][1] * xm + ln["poly"][2] * xm * xm)[1] for ln in pj["lines"]]
+    pitch = float(np.median(np.diff(ys)))
+    x0, x1 = 400, 1900                                        # inside the sheet, away from the label corner
+    top = diff[int(ys[0] - pitch):int(ys[2] + 0.1 * pitch), x0:x1].mean()
+    l4 = diff[int(ys[2] + 0.2 * pitch):int(ys[3] + 0.05 * pitch), x0:x1].mean()
+    E.append(exp("Lines 1–3 untouched", top < 0.004, f"changed fraction in lines 1–3: {top:.4f}"))
+    E.append(exp("Writing starts on line 4", l4 > 0.01, f"changed fraction on line 4: {l4:.4f}"))
+    rows = diff[:, x0:x1].sum(1).astype(np.float64)
+    on_line = sum(rows[int(y - 0.06 * pitch):int(y + 0.06 * pitch) + 1].sum() for y in ys[3:])
+    E.append(exp("Writing sits on the lines (little ink across the printed lines)", rows.sum() > 0 and on_line / rows.sum() < 0.12,
+                 f"share of new ink within ±6 % of a line: {on_line / max(1, rows.sum()):.3f}"))
+    ch = fin[diff]
+    blue = float(np.mean(ch[:, 2] - ch[:, 0])) if len(ch) else 0
+    E.append(exp("Blue ink", blue > 15, f"mean(B-R) of changed pixels = {blue:.1f}"))
+    diary = (FILES / "diary.txt").read_text(encoding="utf-8").strip()
+    got = re.sub(r"\s", "", submitted_text(out))
+    core = re.sub(r"\s", "", diary)
+    E.append(exp("Whole diary written", core[-12:] in got and core[:8] in got, f"start={core[:8] in got} end={core[-12:] in got}"))
+    m = read_meta(Image.open(imgs[0])) or {}
+    E.append(exp("Visible AI label + AIGC metadata", has_label(imgs[0]) and bool(m.get("aigc")), f"label={has_label(imgs[0])} aigc={bool(m.get('aigc'))}"))
+    return E
+
+
+def grade_notes(out: Path) -> list[dict]:
+    pdfs = [p for p in out.rglob("*.pdf") if not any(s in str(p.relative_to(out)).lower() for s in SKIP)]
+    E = [exp("A PDF exists", bool(pdfs), ", ".join(p.name for p in pdfs[:3]) or "none")]
+    E.append(exp("PDF carries the AIGC metadata", bool(pdfs) and all(b"AIGC" in p.read_bytes() for p in pdfs), str([(p.name, b"AIGC" in p.read_bytes()) for p in pdfs])))
+    photos = [p for p in images(out, (".jpg", ".jpeg", ".png", ".webp")) if "photo" in p.name.lower() or "phone" in p.name.lower()]
+    E.append(exp("A phone-photo-like picture exists", bool(photos), ", ".join(p.name for p in photos[:3]) or "none"))
+    E.append(exp("Photo keeps the visible AI label and metadata", bool(photos) and all(has_label(p) and (read_meta(Image.open(p)) or {}).get("aigc") for p in photos),
+                 str([(p.name, has_label(p), bool((read_meta(Image.open(p)) or {}).get("aigc"))) for p in photos[:3]])))
+    js = jobs(out)
+    grid_json = [p.name for p, j in _json_files(out) if isinstance(j, dict) and j.get("kind") == "grid" and j.get("lines")]
+    grid = any((j.get("params") or {}).get("paper") == "grid" for j in js) or bool(grid_json)
+    E.append(exp("Squared (grid) paper", grid, f"job papers {[(j.get('params') or {}).get('paper') for j in js]}; grid paper.json {grid_json[:2]}"))
+    E.append(exp("Math model logic-1 with formulas kept as LaTeX", any(j["model"] == "logic-1" for j in js), str([j.get("model") for j in js])))
+    sub = submitted_text(out)
+    md = [s for s in ("**", "## ", "|---", "| ") if s in sub] + (["# heading"] if re.search(r"(^|\n)#", sub) else []) + \
+         (["> quote"] if re.search(r"(^|\n)>", sub) else [])
+    E.append(exp("Markdown cleaned out of the written text", bool(sub) and not md, f"left-overs: {md}" if sub else "submitted text not found"))
+    bad = [s for s in ("\\bar", "²") if s in sub]
+    E.append(exp("Unwritable symbols substituted (\\bar{v}, m/s²)", bool(sub) and not bad and bool(js), f"left: {bad}"))
+    return E
+
+
+def _truth_blanks() -> dict:
+    cache = FILES / "worksheet.blanks.json"
+    if not cache.exists():
+        import subprocess
+        subprocess.run([sys.executable, str(HERE.parent / "inko-handwriting" / "scripts" / "paper.py"), "blanks", str(FILES / "worksheet.jpg"),
+                        "-o", str(cache), "--overlay", "", "--paper-size", "A4"], check=True, capture_output=True)
+    return json.loads(cache.read_text(encoding="utf-8"))
+
+
+def grade_worksheet(out: Path) -> list[dict]:
+    src = Image.open(FILES / "worksheet.jpg").convert("RGB")
+    imgs = [p for p in images(out) if Image.open(p).size == src.size and p.name != "worksheet.jpg"]
+    E = [exp("Final image is the worksheet itself with answers on it", bool(imgs), ", ".join(p.name for p in imgs[:3]) or "none")]
+    js = jobs(out)
+    E.append(exp("Generated by the Inko API (a succeeded job)", bool(js), f"{len(js)} job(s)"))
+    t = submitted_text(out).replace(" ", "").replace("\\,", "")
+    ok1 = ("19" in t and "12" in t) or bool(re.search(r"1\\?frac\{?7\}?\{?12|1又7/12|7/12", t))
+    ok2 = bool(re.search(r"x>4|x\\gt4", t))
+    ok3 = "375" in t
+    E.append(exp("All three answers correct (19/12, x>4, 375)", ok1 and ok2 and ok3, f"q1={ok1} q2={ok2} q3={ok3}"))
+    if not imgs:
+        return E + [exp(x, False, "no final image") for x in ("Answers sit in the blank areas (not over the printed questions)",
+                                                              "Each of the three blanks got an answer", "Visible AI label + AIGC metadata")]
+    fin = np.asarray(Image.open(imgs[0]).convert("RGB"), np.float32)
+    a = np.asarray(src, np.float32)
+    diff = np.abs(fin - a).max(2) > 45
+    bl = _truth_blanks()["blanks"]
+    H, W = diff.shape
+    corner = np.zeros_like(diff)
+    for c in ("br", "bl", "tr", "tl"):                          # ignore wherever the label went
+        x0, y0, x1, y1 = label_box((W, H), where=c)
+        corner[max(0, y0 - 10):y1 + 10, max(0, x0 - 10):x1 + 10] = True
+    ink = diff & ~corner
+    inside = np.zeros_like(diff)
+    for b in bl:
+        inside[b["y_px"]:b["y_px"] + b["h_px"], b["x_px"]:b["x_px"] + b["w_px"]] = True
+    share = float((ink & inside).sum() / max(1, ink.sum()))
+    E.append(exp("Answers sit in the blank areas (not over the printed questions)", ink.sum() > 500 and share > 0.9,
+                 f"{share:.3f} of new ink inside the blanks ({int(ink.sum())} px)"))
+    per = [int((ink[b["y_px"]:b["y_px"] + b["h_px"], b["x_px"]:b["x_px"] + b["w_px"]]).sum()) for b in bl]
+    E.append(exp("Each of the three blanks got an answer", len(per) == 3 and min(per) > 300, f"ink px per blank: {per}"))
+    m = read_meta(Image.open(imgs[0])) or {}
+    E.append(exp("Visible AI label + AIGC metadata", has_label(imgs[0]) and bool(m.get("aigc")), f"label={has_label(imgs[0])} aigc={bool(m.get('aigc'))}"))
+    return E
+
+
+def main() -> None:
+    run, name = Path(sys.argv[1]), sys.argv[2]
+    out = run / "outputs"
+    E = {"math-homework-photo": grade_math, "own-lined-paper": grade_paper, "notes-to-pdf-and-photo": grade_notes,
+         "worksheet-answers": grade_worksheet}[name](out)
+    n = sum(e["passed"] for e in E)
+    res = {"expectations": E, "summary": {"passed": n, "failed": len(E) - n, "total": len(E), "pass_rate": round(n / len(E), 3)}}
+    (run / "grading.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps(res["summary"]))
+
+
+if __name__ == "__main__":
+    main()

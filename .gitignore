@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.inko/
+inko-output/
+*-workspace/
+tests/_out/
+.DS_Store
+dist/
+evals/files/*.truth*
+evals/files/*.blanks*
