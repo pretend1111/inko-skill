@@ -1,5 +1,7 @@
 # Inko Handwriting — an Agent Skill
 
+**1.2.1 · Logic symbol update (2026-09-28):** `\eta` is accepted and written as n; `\wedge` / `\vee` are verified. `\oplus`, `\odot`, up/down/left arrows and formula `\#` / `\%` are now rejected. See [math support](inko-handwriting/references/writing-math.md).
+
 **[中文说明 → README.zh-CN.md](README.zh-CN.md)**
 
 Give your AI agent a pen. With this skill, Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI, OpenCode and other

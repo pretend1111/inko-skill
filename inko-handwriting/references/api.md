@@ -18,7 +18,7 @@ the HTTP API directly only for something it doesn't cover. Full human docs: http
 
 | Method & path | inko.py | Notes |
 |---|---|---|
-| `GET /models` (no auth) | `models [--symbols]` | models, Logic's stable/beta symbol lists, pricing constants |
+| `GET /models` (no auth) | `models [--symbols]` | models, Logic's stable/beta/substituted/unsupported lists and `symbols.rewrites` (`\eta` → `n`), pricing constants |
 | `GET /account` | `account`, `default-style` | `balance_cents` (what jobs are paid from), this key's limit and spend today, `default_style` (常用字迹 or null), `favorites` (preset codes), `can_remove_label` (when the server sends it: may use `label: none`). `quota_cents` / `quota_pages` = 0 and `membership` = null are kept only for old clients and will be removed |
 | `GET /styles?model=&favorites=` | `styles --model … [--favorites] --where … --sort …` | all handwritings available to the account, with facets, previews and `favorite` / `default` flags; `favorites=true` = only 收藏 |
 | `GET /styles/{code or id}` | — | one handwriting |

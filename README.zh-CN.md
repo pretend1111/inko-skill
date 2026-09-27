@@ -1,5 +1,7 @@
 # Inko 手写 Skill
 
+**1.2.1 · Logic 符号更新（2026-09-28）：** `\eta` 按约定写成 n；`\wedge` / `\vee` 已验证支持。`\oplus`、`\odot`、上下左箭头及公式内的 `\#` / `\%` 改为拦截。详见[数学支持说明](inko-handwriting/references/writing-math.md)。
+
 **[English → README.md](README.md)**
 
 给你的 AI 助手一支笔。装上这个 Skill，Claude Code、Codex、Cursor、GitHub Copilot、Gemini CLI、OpenCode 等支持

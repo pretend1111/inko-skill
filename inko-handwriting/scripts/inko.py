@@ -45,7 +45,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 DEFAULT_BASE = "https://api.inkotype.com/v1"
 UA = f"inko-skill/{VERSION} (+https://inkotype.com/developers)"
 TERMINAL = ("succeeded", "failed", "canceled")

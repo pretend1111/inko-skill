@@ -54,7 +54,7 @@ parentheses after the step: `所以 $AB=AC$（等角对等边）`. `∠` can't b
 - **Numbers that matter go inside `$…$`** with logic-1 (`答：5 小时行驶 $375$ 千米`): Logic writes digits inside formulas
   more reliably than digits in the Chinese text around them.
 - **Weaker symbols** (whatever the quote lists under `warnings`, the fallback ones `\{ \} \lambda \forall \exists`, the
-  experimental ones in §5) are sometimes misdrawn: use as few as the solution needs — explain steps in words
+  untested uses mentioned in §5) are sometimes misdrawn: use as few as the solution needs — explain steps in words
   (两边同时加 3，得 …) and keep the symbol for the result — and check each one in the output.
 - English-medium homework: `Solution:` / `Therefore` / `Answer:` — same principles.
 
@@ -105,7 +105,8 @@ parentheses after the step: `所以 $AB=AC$（等角对等边）`. `∠` can't b
 Logic's symbol support as of 2026-09-28, in LaTeX commands. `python scripts/inko.py models --symbols` prints the live
 lists (`logic-1` → `symbols`), also as LaTeX commands and single characters (`\alpha`, `\frac`, `\sin`, `+`, `A`):
 `stable` = writable (the substituted glyphs and the structures `\frac \sqrt \bar \overline \mathbb` included), `beta` =
-experimental, `substituted` = drawn with a real person's glyph, `unsupported` = refused, `environments` = the
+experimental (currently empty), `substituted` = drawn with a real person's glyph, `unsupported` = refused,
+`rewrites` = explicit notation changes (`\eta` → `n`), `environments` = the
 `\begin{…}` names that work. Always run the free quote — its `errors` name every symbol it refuses (with paragraph
 and snippet), its `warnings` the weaker ones. It is the source of truth: where it disagrees with this section, follow
 the quote.
@@ -115,9 +116,12 @@ the quote.
 (`unsupported_symbol` in `errors`) and by `generate` (`invalid_text`); without that check the whole formula would
 silently vanish from the page. Replace it (§6) before paying.
 
+**Verified in the 2026-09-28 production-setting tests:** 203 supported table entries (137 model-written / rewritten,
+59 substituted, 7 fallback), 54 unsupported. Entries include command aliases, not 203 distinct glyph shapes.
+
 **Written by the model, in the chosen hand** — use freely:
 - Digits, all lowercase latin letters, uppercase **A B C E F G H I L M N P R S T V X Y**
-- `+ - = < > \lt \gt \times \div \pm \neq \ne \leq \le \geq \ge \in \to \rightarrow \infty`
+- `+ - = < > \lt \gt \times \div \pm \neq \ne \leq \le \geq \ge \in \to \rightarrow \infty \wedge \vee`
 - `( ) [ ] | / , . ; ! '`, `\prime`, `\mid \vert` (a `|`), `\parallel` (written as `||`)
 - Greek: `\alpha \beta \gamma \theta \mu \pi \sigma \phi \Delta`
 - `\sum \int`; `\iint \iiint` are written as two / three ∫
@@ -125,9 +129,12 @@ silently vanish from the page. Replace it (§6) before paying.
 - Functions: `\sin \cos \tan \log \lim` (also `\log_a`) as whole words; `\ln \exp \det \max \min \sec \csc \cot \arcsin
   \arccos \arctan \sinh \cosh \tanh` letter by letter, the way students write them (they look like ordinary letters)
 - `\ell` is written as l, `\dx` as d x
+- **`\eta` is accepted but deliberately written as Latin n, not η.** Make this visible when preparing content; if
+  the distinction matters (especially a formula already using n), resolve the notation before submitting. Raw `η`
+  is not equivalent input: use the `\eta` command for this rewrite.
 
-**Substituted glyph** — fine to use, but the shape isn't the writer's own. These never occur in Logic's training
-pages, so Inko draws them with a real person's handwritten glyph, sized, placed and weighted like the chosen hand (each
+**Substituted glyph** — fine to use, but the shape isn't the writer's own. Tests show the model alone cannot reliably
+write these, so Inko draws them with a real person's handwritten glyph, sized, placed and weighted like the chosen hand (each
 handwriting always gets the same one); they may look slightly different from the rest of the formula.
 - Uppercase **D J K O Q U W Z**; `:`, `\colon`, `*`
 - Greek: `\delta \epsilon \varepsilon \varphi \nu \xi \rho \tau \omega \Gamma \Theta \Lambda \Sigma \Phi \Psi \Omega`
@@ -140,17 +147,18 @@ handwriting always gets the same one); they may look slightly different from the
 **Model first, substituted glyph if its attempt fails**: `\{ \}` (`\lbrace \rbrace`), `\lambda`, `\forall`,
 `\exists` — few training samples; look at them in the result.
 
-**Experimental** — learned from Chinese handwriting, never checked inside formulas: `\# \% \uparrow \downarrow
-\leftarrow \oplus \odot \wedge \vee`. Avoid them in anything that matters; if you use one, check it in the result
-(`50%` as plain text is the safer form of `\%`).
+**No symbols remain in the old experimental list.** The production-setting tests promoted `\wedge \vee` to
+supported and moved `\# \% \uparrow \downarrow \leftarrow \oplus \odot` to unsupported.
+Warnings can still apply to untested structures (wide / nested / inline matrices) and Chinese inside formulas.
+Plain-text `50%` outside `$…$` is unaffected.
 
-**Not supported** — never learned, drawn as random strokes. Never use them; the quote refuses them
+**Not supported** — tests show incorrect glyphs or strokes, or the parser cannot map the command. Never use them; the quote refuses them
 (`unsupported_symbol`). Substitutions in §6.
-- Greek: `\eta \zeta \kappa \chi \psi \iota \upsilon \vartheta \varrho \varsigma \varpi \Pi \Xi \Upsilon`
-- `\otimes \ominus \bigoplus \bigcap \bigcup \bigvee \bigwedge \cong \simeq \triangleq \gg \ni \supseteq \subsetneq
+- Greek: `\zeta \kappa \chi \psi \iota \upsilon \vartheta \varrho \varsigma \varpi \Pi \Xi \Upsilon`
+- `\otimes \ominus \oplus \odot \bigoplus \bigcap \bigcup \bigvee \bigwedge \cong \simeq \triangleq \gg \ni \supseteq \subsetneq
   \models \vdash \Vdash \top`
-- Arrows: `\leftrightarrow \longrightarrow \hookrightarrow \rightleftharpoons`
-- `\lfloor \rfloor \lceil \rceil`, `\angle \aleph \dagger \bullet`
+- Arrows: `\uparrow \downarrow \leftarrow \leftrightarrow \longrightarrow \hookrightarrow \rightleftharpoons`
+- `\lfloor \rfloor \lceil \rceil`, `\angle \aleph \dagger \bullet \# \%`
 - Accents: `\hat \tilde \vec \dot` (`\bar` and `\overline` work)
 
 **Structures**

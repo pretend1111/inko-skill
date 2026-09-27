@@ -19,6 +19,10 @@ a phone photo, a worksheet with answers filled in, a PDF).
 All scripts are in `scripts/` next to this file (call them with the path you installed to, e.g.
 `python .claude/skills/inko-handwriting/scripts/inko.py …`). They print JSON on stdout — read it, don't guess.
 
+For Logic math, read `references/writing-math.md` §5 before preparing formulas. In the 2026-09-28 update,
+`\eta` writes n (not η), `\wedge` / `\vee` are supported, and the old experimental arrows / `\oplus` / `\odot` /
+formula `\#` / `\%` are blocked. Use live `models --symbols` and a free quote rather than an older cached list.
+
 ## First time in a session
 
 ```bash
