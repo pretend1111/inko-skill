@@ -55,7 +55,7 @@ starting point.
 3. `render -o out/` and **look at the result** before handing it over. Not right → `undo` and try differently.
 4. Can't get it right by commands (a few glyphs that need hand placement)? Start the `editor` and let the user drag.
 5. Deliver the rendered PNG / JPG / PDF (they carry the label and the AIGC metadata). Continue with the other
-   post-processing scripts (compose.py, photo.py) on the rendered pages as usual.
+   flat-page scripts (compose.py drift, ink.py, pdf.py) on the rendered pages as usual.
 
 ## Commands
 

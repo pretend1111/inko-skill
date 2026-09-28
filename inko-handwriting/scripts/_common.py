@@ -150,7 +150,7 @@ def read_meta(img: Image.Image) -> dict:
 
 
 def merge_meta(*metas: dict) -> dict:
-    """First non-empty value wins (e.g. paper photo + Inko ink -> the ink's AIGC fields)."""
+    """First non-empty value wins (e.g. background + Inko ink -> the ink's AIGC fields)."""
     out: dict = {"aigc": None, "label_png": None, "ink": None, "dpi": None}
     for m in metas:
         for k in out:
@@ -378,7 +378,7 @@ def apply_label(img: Image.Image, label: Image.Image | None = None, frac: float 
                 margin: tuple[float, float] = (0.035, 0.022), color: tuple[int, int, int] | str | None = "auto",
                 at: tuple[float, float] | None = None) -> Image.Image:
     """Put the visible label 「AI生成 · Inko」 on img: text height >= frac x the shortest side, in a corner (bottom-right default).
-    color="auto" keeps it readable: mid-gray on light backgrounds, light gray on dark ones (a dark desk in a photo)."""
+    color="auto" keeps it readable: mid-gray on light backgrounds, light gray on dark ones."""
     label = label or default_label()
     W, H = img.size
     target = max(frac, LABEL_MIN_FRAC) * min(W, H)
@@ -391,7 +391,7 @@ def apply_label(img: Image.Image, label: Image.Image | None = None, frac: float 
         g = LABEL_MIN_FRAC * min(W, H) * 1.02 / max(1, th)
         lab = label.resize((max(1, round(lab.width * g)), max(1, round(lab.height * g))), Image.LANCZOS)
     mx, my = round(margin[0] * W), round(margin[1] * H)
-    if at is not None:                                   # explicit bottom-right anchor (e.g. a sheet's corner in a photo)
+    if at is not None:                                   # explicit bottom-right anchor (e.g. a custom flat-page corner)
         x, y = max(0, int(at[0] - lab.width)), max(0, int(at[1] - lab.height))
     else:
         x = max(0, W - mx - lab.width if "r" in where else mx)

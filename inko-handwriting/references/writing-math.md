@@ -98,7 +98,6 @@ parentheses after the step: `所以 $AB=AC$（等角对等边）`. `∠` can't b
   and run the check again. The check runs on every logic-1 text: prose that merely contains a formula (notes, a
   letter) keeps its `。` — ignore `full_stop` there.
 - Date in the exercise-book header (`ruled8` / `ruled7`): see the recipe in `layout.md`.
-- The user's own exercise book: see `paper-matching.md`.
 
 ## 5. What Logic can write inside `$…$`
 
@@ -259,4 +258,4 @@ $-x=-2$
 `{"line": [1, 5], "f": {"indent": 3}}` the steps line up under the text after `3. 解：`. The first line's formula
 follows 得 on the same line (it fits on ruled 8 mm at the default size; a longer `=` chain would be cut by inko.py and
 carry on at the start of the next line). No full stop anywhere.
-Then `compose.py drift` on the pages, unless they go onto the user's paper with `compose.py lines`.)
+Optionally use `compose.py drift` to adjust line positions on the flat pages.)

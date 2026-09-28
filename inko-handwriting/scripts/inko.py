@@ -45,7 +45,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-VERSION = "1.2.1"
+VERSION = "1.3.0"
 DEFAULT_BASE = "https://api.inkotype.com/v1"
 UA = f"inko-skill/{VERSION} (+https://inkotype.com/developers)"
 TERMINAL = ("succeeded", "failed", "canceled")
@@ -268,11 +268,6 @@ def cmd_doctor(a) -> None:
     except ImportError:
         out["ok"] = False
         out["problems"].append("Pillow/numpy missing (needed for post-processing): python -m pip install pillow numpy")
-    try:
-        import cv2  # noqa: F401
-        out["opencv"] = "available (better sheet detection in photos)"
-    except ImportError:
-        out["opencv"] = "not installed (optional)"
     try:
         sys.path.insert(0, str(Path(__file__).parent))
         from _common import cjk_font  # noqa: WPS433

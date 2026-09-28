@@ -1,33 +1,21 @@
 # Inko 手写 Skill
 
-**1.2.1 · Logic 符号更新（2026-09-28）：** `\eta` 按约定写成 n；`\wedge` / `\vee` 已验证支持。`\oplus`、`\odot`、上下左箭头及公式内的 `\#` / `\%` 改为拦截。详见[数学支持说明](inko-handwriting/references/writing-math.md)。
-
 **[English → README.md](README.md)**
 
-给你的 AI 助手一支笔。装上这个 Skill，Claude Code、Codex、Cursor、GitHub Copilot、Gemini CLI、OpenCode 等支持
-`SKILL.md` 的 AI 助手，就能用 [Inko](https://inkotype.com) 把笔记、书信、作文、整道数学题的解答写成**真人手写**，
-再处理成你真正要的样子：
+**1.3.0：只产出标准二维平面图片与 PDF。** 已移除拍照拟真、桌面场景、透视、纸张卷曲、扫描/复印效果和照片贴字功能。
 
-- **正好写在你自己本子的横线上**（发一张照片就行，倾斜、纸面弯曲、透视都能跟上）
-- 像**手机拍的照片**、像**扫描件**，或者直接出 **PDF**
-- 把答案**填进练习卷的空白处**
-- 换**墨水颜色、笔的类型、笔画粗细**，不用重新付费
+用 [Inko](https://inkotype.com) 将笔记、书信、作文、数学解答写成自然笔迹的平面页面：
 
-AI 会像学生一样写解题步骤，只问你真正要紧的几件事（写多详细、哪种字迹、什么纸、什么笔、多少钱），确认后才开始写。
+- 标准 PNG 图片与 PDF，白纸、米黄纸、方格纸、横线纸、作文纸、田字格
+- 自定义排版、标题、文本框与行距
+- 修改墨色、笔型、粗细和字间距，保留可编辑笔迹包
+- 可以读取题目照片作为输入，但结果只交付独立的平面答题页
 
-| 做完的数学作业 | 练习卷照片上填答案 | 方格纸笔记（手机拍照效果） |
-|---|---|---|
-| ![横线作业本上像学生写的解题步骤](docs/images/math-homework.jpg) | ![答案写在练习卷每题下面的空白处](docs/images/worksheet.jpg) | ![5 mm 方格纸上的物理笔记，放在书桌上拍](docs/images/notes-photo.jpg) |
+> 「把这三道数学题写成横线纸上的手写解答，给我 PNG 和 PDF」
+> 「把 notes.md 写成方格纸笔记，用蓝色圆珠笔」
+> 「把这封信写在米黄色纸上，输出标准图片」
 
-| 写在你自己的本子上 | 像手机拍的照片 | 换笔、换颜色 |
-|---|---|---|
-| ![字贴在作业本照片的横线上](docs/images/on-your-paper.jpg) | ![生成的页面做成书桌上拍的照片](docs/images/desk-photo.jpg) | ![同一段字：原样、蓝色圆珠笔、铅笔、红色中性笔](docs/images/restyle.jpg) |
-
-以上都是 AI 助手在测试中按这个 skill 做出来的成品，每张都保留了 Inko 的 AI 生成标识。
-
-> 「帮我把这 5 道题做完，写在我的作业本上」+ 题目照片 + 作业本照片
-> 「把 notes/第三章.md 写成手写 PDF，方格纸，蓝色圆珠笔」
-> 「这封信写在米黄色信纸上，做成放在书桌上拍的照片」
+Logic 仍沿用 1.2.1 的最新符号规则：`\eta` 写成 n，`\wedge` / `\vee` 支持；详见[数学说明](inko-handwriting/references/writing-math.md)。
 
 ## 怎么用（给用户）
 
@@ -73,18 +61,15 @@ AI 会像学生一样写解题步骤，只问你真正要紧的几件事（写�
 
 | 文件 | 作用 |
 |---|---|
-| `SKILL.md` | 工作流程、规矩、什么时候问用户、哪个需求用哪个工具 |
-| `references/` | 各场景做法、像学生一样写数学、符号表与替换、排版、选字迹、贴合自己的纸、后处理、API、排错 |
-| `assets/layouts/` | 书信、横线作业、笔记、作文纸、填空答案的排版模板 |
-| `scripts/inko.py` | API 客户端：自检、保存 key、查字迹（含收藏）、常用字迹、样张、报价、排版预览、生成、等待、免费重写…… |
-| `scripts/ink.py` | 改墨水颜色 / 粗细 / 深浅 / 笔的质感，提取透明底手写层 |
-| `scripts/paper.py` | 识别横线纸照片（行距、倾斜、已写的行）、找练习卷空白处、拉正照片、画各种纸 |
-| `scripts/compose.py` | 把字贴到用户自己的纸上（逐行对齐横线）、练习卷上、任意图片的指定位置 |
-| `scripts/photo.py` | 手机拍照 / 扫描件 / 复印件效果 |
-| `scripts/pdf.py` | 图片合成按真实纸张尺寸的 PDF |
+| `SKILL.md`、`references/` | 标准平面输出流程、数学符号、排版、字迹、API 与排错 |
+| `scripts/inko.py` | 自检、字迹、报价、排版预览、生成与下载 |
+| `scripts/scene.py` | 可编辑笔迹包：移动、间距、笔型、浏览器编辑器、平面导出 |
+| `scripts/ink.py` | 修改墨色、粗细、深浅，提取透明手写层 |
+| `scripts/paper.py make` | 绘制标准二维纸张背景，不识别或处理照片 |
+| `scripts/compose.py drift` | 可选的二维行位置微调，不改变纸张几何 |
+| `scripts/pdf.py` | 平面图片合成 PDF |
 
-`inko.py` 只用 Python 标准库；图像脚本需要 Pillow 和 numpy（OpenCV 可选）。除 `inko.py` 调 API 外，全部在本地运行，
-不会上传你的图片。
+图像脚本使用 Pillow 和 numpy，本地处理，不上传图片。更新安装会替换旧 Skill 目录，移除旧版脚本，不动 API key。
 
 ## 费用、key 与标识
 
@@ -99,10 +84,10 @@ AI 会像学生一样写解题步骤，只问你真正要紧的几件事（写�
 ## 开发
 
 ```bash
-python tests/run_tests.py          # 离线：合成的本子照片、横线识别、贴字、拍照效果、PDF、标识检查
+python tests/run_tests.py          # 离线：平面页面、墨色、排版、PDF、标识与功能边界
+python tests/test_logic_symbols.py # Logic 符号契约
 ```
 
-`evals/` 里是给 AI 助手的真实任务（数学作业照片、写到自己的本子上、笔记转手写 PDF + 照片、练习卷填答案），
-带输入文件和按结果打分的脚本 `evals/grade.py`。
+`evals/` 包含数学题输入与笔记转标准平面图片/PDF 的任务和评分脚本。
 
-MIT 许可。Inko 及其 API 由 inkotype.com 提供，使用 API 需要账户并遵守其服务条款。
+MIT 许可。Inko API 需要账户并遵守服务条款。

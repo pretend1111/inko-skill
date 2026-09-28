@@ -29,15 +29,11 @@ Contents: 1. Minimal spec · 2. Papers · 3. Page settings `d` · 4. Styling cha
 | `tian` | 田字格, 12 × 15 cells of 14 mm | cells from y = 30 | one per cell |
 
 On ruled/grid papers the size follows the paper (writing sits on the lines); set `d.size` only on `blank`.
-There is **no squared (5 mm grid) paper** in layouts — plain mode has `--paper grid`. For a squared page with a
-layout (centred title, no indent, boxes): generate on `blank` with the layout from
-`paper.py make -o grid.png --kind grid --pitch 5 --json grid.json` (its `suggested_layout`), then
-`compose.py lines --paper grid.json` (one line of text per two squares; `--row-step` changes that).
+There is **no squared (5 mm grid) paper** in custom layouts. Use plain `--paper grid`, or choose blank/ruled paper for a custom layout.
 
 The exercise-book header of `ruled8` / `ruled7` reads "No. ________   Date ____ / ____", right end at x = 192 mm,
 baseline y = 24 mm; the Date blanks are x ≈ 175.9–182.5 and 185.3–191.9 mm (see the recipe below).
-`background: {id, w, h}` uses a paper photo uploaded on the website (id from there); through the API the skill
-instead composes onto the user's paper locally (`paper-matching.md`).
+Use the built-in paper types for standard flat outputs; uploaded photographic backgrounds are outside this skill.
 
 ## 3. Page settings `d`
 
@@ -112,7 +108,7 @@ A pen string is `type|color|weight|ink`: `gel|blue|0.3|0`, `pencil||0|-0.2`, `""
 Types `original gel ballpoint fountain pencil`; colours `black blue blueblack` (pencil ignores colour); weight and ink
 −1 … 1. Precedence for a character: its mark → its box → the page's `pageDefaults` → `d.pen` → the request's `--pen-*`.
 Other colours (red corrections, green…) aren't available from the API: recolour afterwards with
-`ink.py restyle` (whole page) or generate those parts separately and `compose.py place` them.
+`ink.py restyle` (whole page) or `scene.py pen` for selected glyphs.
 
 ## 7. Recipes
 
@@ -140,10 +136,9 @@ Continuation lines lined up under the text after `1. 解：`: `{"line": [1, 4], 
 Left edges that aren't ruler-straight: not a layout setting — every line starts at exactly the same x. Run
 `compose.py drift` on the generated pages (`postprocess.md`); don't fake it with spaces or tiny indent marks.
 Every other line on ruled paper: `"d": {"lineStep": 2}`. Exactly 20 characters per line: `"d": {"cols": 20}`.
-Match a real paper: use `suggested_layout` from `paper.py analyze` (blank paper, `size`, `line`, `margins`).
 Two columns: two `rect` boxes side by side with `"flow": true`, `order` 1 and 2, and `"d": {"fillRest": false}`.
 A different handwriting for a quotation: a mark with `{"style": "205"}` (Lyric) on that range.
-A tilted sticky-note: a `rect` box with `"rot": -6`.
+A rotated text box remains a flat layout element: `"rot": -6`.
 
 Ready-made templates: `assets/layouts/` (`letter.json`, `homework-ruled8.json`, `notes-blank.json`,
 `essay-compo.json`, `answers-boxes.json`). Copy, replace the text, keep the structure.

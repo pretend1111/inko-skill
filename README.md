@@ -1,34 +1,19 @@
-# Inko Handwriting — an Agent Skill
+# Inko handwriting skill
 
-**1.2.1 · Logic symbol update (2026-09-28):** `\eta` is accepted and written as n; `\wedge` / `\vee` are verified. `\oplus`, `\odot`, up/down/left arrows and formula `\#` / `\%` are now rejected. See [math support](inko-handwriting/references/writing-math.md).
+**[简体中文 → README.zh-CN.md](README.zh-CN.md)**
 
-**[中文说明 → README.zh-CN.md](README.zh-CN.md)**
+**1.3.0: standard flat page images and PDFs only.** Camera simulation, scene backgrounds, perspective, paper curl,
+scan/photocopy effects and compositing onto photographs have been removed.
 
-Give your AI agent a pen. With this skill, Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI, OpenCode and other
-agents that read `SKILL.md` can turn notes, letters, essays and full math solutions into **real handwriting** with the
-[Inko](https://inkotype.com) API — and then make it look like what you actually need:
+Turn notes, letters, essays and math solutions into naturally handwritten **two-dimensional pages** with
+[Inko](https://inkotype.com). Choose standard paper, handwriting and pen; adjust layout, spacing and colour;
+deliver PNG pages and PDFs. Questions may come from an input photo, but the output is a separate flat answer page.
 
-- written **exactly on the lines of your own notebook paper** (from a phone photo: tilt, curl and perspective followed)
-- a **phone photo** or **scan** of the page, a **PDF**
-- **answers filled into the blanks** of a worksheet
-- another **ink colour, pen type or stroke weight**, without paying again
+> “Write these math solutions on ruled paper and give me PNG pages and a PDF.”
+> “Turn notes.md into handwritten squared-paper notes in blue ink.”
 
-Your agent solves the math like a student would, asks you the few things that matter (how detailed, which handwriting,
-which paper, which pen, the price), and only then writes.
-
-| Homework, solved and hand-written | Answers filled into a worksheet photo | Notes on squared paper, as a phone photo |
-|---|---|---|
-| ![A math homework page: steps written like a student on exercise-book paper](docs/images/math-homework.jpg) | ![Answers written into the blanks under each question of a worksheet photo](docs/images/worksheet.jpg) | ![Physics notes on 5 mm squared paper, photographed on a desk](docs/images/notes-photo.jpg) |
-
-| On your own notebook page | As a phone photo | Other pens and colours |
-|---|---|---|
-| ![Handwriting composed onto a photo of a notebook page](docs/images/on-your-paper.jpg) | ![A generated page made to look like a phone photo on a desk](docs/images/desk-photo.jpg) | ![The same handwriting as original, blue ballpoint, pencil and red gel](docs/images/restyle.jpg) |
-
-All examples were made by AI agents following this skill in our tests; every image keeps Inko's AI-generation label.
-
-> "帮我把这 5 道题做完，写在我的作业本上" + a photo of the problems + a photo of the exercise book
-> "Turn notes/chapter3.md into a handwritten PDF on squared paper, blue ballpoint"
-> "Write this letter on cream letter paper and make it look like a photo on my desk"
+Logic retains the 1.2.1 symbol update: `\eta` writes n, `\wedge` / `\vee` are supported.
+See [math support](inko-handwriting/references/writing-math.md).
 
 ## Use it (for people)
 
@@ -77,29 +62,18 @@ files or commits.
 
 Updating later: run steps 1–2 again (the installed copy is replaced; the key is not touched).
 
-## What's inside
+## What's included
 
-```
-inko-handwriting/
-  SKILL.md                 workflow, rules, when to ask the user, which tool for which job
-  references/              scenario recipes, writing math like a student, symbol table, layouts,
-                           handwriting choice, own-paper matching, post-processing, API, troubleshooting
-  assets/layouts/          letter, homework (ruled), notes, essay (作文纸), worksheet-answers templates
-  scripts/
-    inko.py                API client: doctor, auth, styles (+ favourites), default-style, previews, quote, layout(+preview), generate, wait, rewrite …
-    preview.py             free local preview of a layout
-    ink.py                 recolour / re-weight / re-texture handwriting, extract a transparent ink layer
-    paper.py               analyse a photo of ruled paper, find worksheet blanks, straighten photos, draw papers
-    compose.py             put handwriting onto the user's paper (line-snapped), a worksheet, or any image
-    photo.py               phone-photo / scan / photocopy look
-    pdf.py                 images → PDF at real paper size
-install.py                 installer for all agents
-tests/                     offline tests with synthetic paper photos
-evals/                     realistic agent tasks (math homework photo, own notebook page, notes → PDF + photo,
-                           worksheet answers) with inputs and an outcome grader
-```
-`inko.py` needs only the Python standard library; the image scripts need Pillow and numpy (OpenCV optional).
-Everything except `inko.py` runs locally and never uploads your images.
+- `SKILL.md`, `references/`: flat-page workflow, content, symbols, layouts, styles, API and troubleshooting.
+- `inko.py`: API client, quote, preview, generate, download.
+- `scene.py`: editable glyph packages, spacing and pen changes, browser editor, flat-page export.
+- `ink.py`: ink colour, weight and transparent layers.
+- `paper.py make`: standard flat paper backgrounds; no image detection.
+- `compose.py drift`: optional two-dimensional line-position edits only.
+- `pdf.py`: images to PDF at the selected paper size.
+
+Image processing uses Pillow and numpy locally. Reinstalling replaces the previous skill folder, including removal
+of retired scripts, without touching API keys.
 
 ## Money, keys, labels
 
@@ -116,9 +90,10 @@ Everything except `inko.py` runs locally and never uploads your images.
 ## Development
 
 ```bash
-python tests/run_tests.py          # offline: synthetic notebook photos, paper detection, compose, photo, pdf, labels
-INKO_API_KEY=… python tests/run_tests.py --online   # + free API checks (doctor, quote, layout)
+python tests/run_tests.py          # offline flat pages, ink, layout, PDF, metadata and feature boundaries
+python tests/test_logic_symbols.py # Logic client contract
 ```
 
-MIT licensed. Inko and the Inko API are a service of inkotype.com; using the API requires an account and follows its
-terms.
+`evals/` covers math from an input image and notes to flat pages/PDF, with an outcome grader.
+
+MIT licensed. Inko API usage requires an account and follows its service terms.

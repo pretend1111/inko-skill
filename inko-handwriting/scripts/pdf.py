@@ -3,12 +3,12 @@
 
     python pdf.py page-1.png page-2.png -o homework.pdf
     python pdf.py final.jpg final-2.jpg -o notes.pdf --size B5 --margin 0
-    python pdf.py photo.jpg -o photo.pdf --size auto --jpeg 85
+    python pdf.py page.jpg -o pages.pdf --size auto --jpeg 85
 
 Page size: "auto" (default) uses the image's dpi (Inko pages: A4 at 300 dpi) and falls back to A4 in the image's
 orientation; or A4 / A5 / B5 / Letter / 16K … / WxH in mm. Images are fitted inside the page (never cropped, so the
 visible label 「AI生成 · Inko」 stays whole). The implicit label goes into the PDF's Info (/AIGC) and XMP metadata.
-Inko's own `inko.pdf` (from `inko.py generate`) is already a finished PDF — use this for edited / composed / photo images.
+Inko's own `inko.pdf` (from `inko.py generate`) is already a finished PDF — use this for edited flat-page images.
 """
 from __future__ import annotations
 

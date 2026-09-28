@@ -1,221 +1,38 @@
-# Scenario recipes
+# Standard flat-page scenarios
 
-Each recipe: what to find out, what to prepare, the commands, and the judgement calls. `S=scripts` below means the
-`scripts/` folder of this skill. Always: quote → confirm price → `--yes` → post-process (pages delivered as they are,
-with several left-aligned lines: `compose.py drift` for natural left edges, `postprocess.md`) → look at the result.
+All deliverables are front-facing two-dimensional PNG pages and/or PDFs. Input pictures can provide questions or
+text to transcribe, but are not used as output scenes. Do not add camera perspective, table backgrounds, lighting,
+page curl, scan/photocopy effects, or paste handwriting into a real-paper photograph.
 
-Contents
-1. Math homework from a photo ("做完这些题，出手写图片")
-2. The user's own lined paper (text + photo of their paper)
-3. Worksheet: write answers into the blanks of a printed sheet
-4. Notes / lecture handout → handwritten PDF
-5. Letter, card, postcard
-6. Essay on 作文纸 / 田字格 practice
-7. "Make it look like a phone photo" / scan / photocopy
-8. Copying practice (抄写) and long texts
-9. Change the look afterwards (colour, pen, thickness) without paying again
-10. English or mixed-language pages
+## Math homework
 
----
+Read the questions from text or an input image. Solve them and prepare student-style steps using `writing-math.md`:
+解 / 由…得 / 所以 / 答, formulas next to their lead-ins, supported symbols only. Use logic-1, usually a `ruled8`
+layout with indent 0. Run the free quote and layout preview, confirm the cost, generate, inspect every answer,
+and deliver the flat PNG pages and their PDF. For a worksheet input, number the answers on a separate standard page.
 
-## 1. Math homework from a photo
+## Notes and handouts
 
-**Find out** (ask in one message, with defaults): detail level (详细 / 适中 / 简洁), paper (their own exercise book photo?
-ruled 8 mm? grid? blank A4?), handwriting (neat student? casual?), pen (blue gel? black?), output (image of their page /
-photo-like / PDF). If they only said "帮我做完出手写图片", default to: 适中, ruled 8 mm, a neat Logic handwriting, black
-gel pen, plain PNG pages — and say so.
+Remove Markdown markers; keep headings and list numbering, and preserve supported math as LaTeX. Plain mode
+`--paper grid --size small` gives squared paper. For a centred title or exact placement, use a built-in layout paper
+such as blank or ruled8 and `assets/layouts/notes-blank.json`. There is no grid paper in custom layouts.
+Deliver the generated PNGs and `inko.pdf`; use `pdf.py` to rebuild a PDF after local page edits.
 
-**Prepare**
-1. Read every problem from the photo carefully (numbers, signs, exponents). If something is unreadable, ask.
-2. Solve. Double-check arithmetic; a wrong answer written beautifully is worse than none.
-3. Write the solution like a student (see `writing-math.md`): `1. 解：` on the first line, one step per line, reasons
-   in Chinese words (因为/所以/由…得) on the same line as the formula they lead to (`所以 $x=4$`), final 答：, units
-   inside the formula (`$40cm^2$`) or in Chinese. No `$$…$$`, no full stops (commas at most). Don't copy the problem
-   statement unless the user wants it.
-4. Only symbols Logic can write (`writing-math.md` §5 — unknown LaTeX commands are refused); replace the rest (§6).
-   Matrices, `cases` and systems of equations work; `∠` doesn't (write 角).
+## Letters and diaries
 
-**Handwriting**: Logic has 8 handwritings per account. If the user's 常用字迹 is one of them, leave out `--style` (the
-quote shows `style.source: default`); otherwise take a favourite among the 8 (`inko.py styles --model logic-1
---favorites`), else `inko.py styles --model logic-1 --sort neat` lists all 8 — a neat, medium-weight one (not the
-heaviest) reads best for homework. Show a contact sheet if the user cares.
+Use lyric-1 unless formulas are present. Choose white, cream, ruled or letter paper. Put greeting, paragraphs,
+closing and date in their intended positions (`writing-text.md`, `assets/layouts/letter.json`). Output the page
+itself, not an image of a card or notebook in a scene.
 
-**Layout** (`ruled8`, one step per line, a blank line between problems; see `assets/layouts/homework-ruled8.json`):
-```json
-{"text": "1. 解：$x^2-4x+3=0$\n因式分解得 $(x-1)(x-3)=0$\n所以 $x_1=1$，$x_2=3$\n\n2. 解：…", "paperId": "ruled8",
- "marks": [{"line": [1, 2], "f": {"indent": 3}}], "d": {"indent": 0}}
-```
-(the mark lines steps up under the text after `1. 解：`). Write it with your file tool as `hw.json`, then:
-```bash
-python $S/inko.py layout --spec hw.json --preview hw-preview.png          # free: pages, unplaced chars, math_style, preview
-python $S/inko.py generate --layout hw.json --style <code> --pen-type gel   # quote only (model picked: formulas → logic-1)
-python $S/inko.py generate --layout hw.json --style <code> --pen-type gel --yes
-python $S/compose.py drift --job inko-output/<run> -o hw-final             # natural left edges (keeps label + metadata)
-```
-**If they want it on their own exercise book**: do recipe 2 with this text instead of a ruled8 layout (no separate
-drift: `compose.py lines` already does it).
-**Photo-like**: `photo.py hw-final/page-1.png -o hw-photo.jpg --preset flat` (the drifted page; clearest,
-homework-app look) or `--preset desk`.
+## Essays and writing practice
 
-Judgement calls: students skip trivial algebra at 简洁, never at 详细. Every formula stays inline right after its
-lead-in — never `$$…$$` (centred, textbook look), never a formula alone on the line after 所以 / 得. Long chains may run
-past the line end: inko.py cuts long `=` chains into pieces (`formula_splits`) that continue at the left of the next
-line, like a student's. About 30 characters fit on a ruled 8 mm line at default size; in the preview, `所以` left alone
-at a line end or `mshrink` / `mtiny` warnings mean a formula didn't fit and wasn't cut (no relation to cut at, `--keep-formulas`,
-or `formula_note` says why) — start that step on a line of its own, or cut it yourself before a relation (`$A$ $=B$`).
-Fix every `math_style` warning (no `。．.`, lead-ins joined to their formulas) before paying. Look closely at digits,
-punctuation right after formulas and units in the result — the usual weak spots.
+Use `paperId: compo` for 作文纸 or `tian` for 田字格. Each character belongs in its cell; do not apply line drift.
+For repeated copying, repeat the text with clear paragraph breaks and quote the full character count. Split jobs
+above 20,000 characters / 60 pages at paragraph boundaries and keep handwriting and pen consistent.
 
----
+## Local corrections
 
-## 2. The user's own lined paper
-
-The user gives text (or asks you to write it) and a photo/scan of their paper, and wants the writing on its lines.
-
-```bash
-python $S/paper.py analyze paper.jpg -o paper.json --overlay paper-check.png   # + --paper-size B5 or --line-mm 8 if known
-```
-- Open `paper-check.png` and show it to the user: lines found (green free / red already written), writing area (blue).
-  Confirm: spacing, which line to start on, skip lines (write on every other line?), pen colour.
-- If some lines are already written on, pick a handwriting that resembles that writing (`existing_writing` in
-  paper.json; look at the photo) — the new lines must look like the same person continued.
-- `scale_from` says "ASSUMED 8 mm": ask the line spacing or paper size if stroke thickness matters; for position it
-  doesn't (everything is matched to the lines themselves).
-- Build the layout from `suggested_layout` in the JSON (it matches character size, line spacing and line length to the
-  paper): `{"text": "...", "paperId": "blank", "d": <suggested d>}`. Check `capacity_chars_est` against your text — too
-  long means a second sheet (ask for another photo, or it continues on another copy of the same paper).
-- Generate (quote → confirm → `--yes`), then:
-```bash
-python $S/compose.py lines --job inko-output/<run> --paper paper.json -o final.jpg
-# colour, height above the line and the label corner are chosen automatically (the JSON says what and why);
-# options: --start-line 5  --every 2 (every other line)  --color match|blue|black  --lift 0.1  --x-offset 0.5
-#          --drift natural|random|none  --drift-amount 1.0   (left edges wander a little by default)
-```
-- Look at `final.jpg` zoomed in on two or three lines. The text should sit on the lines, not cross them, and the left
-  edges should wander slightly like a hand's (`drift_mm` per line in the JSON `check`), not form a ruler-straight column.
-- A straightened copy of the photo was used for detection; the ink is written back into the ORIGINAL photo, so the
-  result looks like their photo with writing on it.
-
-More (photo tips, grid paper, curled pages, fixing offsets): `paper-matching.md`.
-
----
-
-## 3. Worksheet answers into blanks
-
-```bash
-python $S/paper.py blanks worksheet.jpg -o blanks.json --overlay blanks-check.png --paper-size A4
-```
-- Show the overlay; map blank #n → question with the user.
-- Layout on `blank` paper with one box per answer at the blank's `x_mm, y_mm, w_mm, h_mm` (A4 worksheet → same mm;
-  another size: see `paper-matching.md`). The skill accepts a shorthand — a `text` inside each box; `inko.py` turns it
-  into the API's blocks for you and writes nothing else on the page:
-```json
-{"paperId": "blank", "boxes": [
-  {"id": "Q1", "text": "$x=3$", "x": 32, "y": 64, "w": 80, "h": 18, "form": {"size": 6}},
-  {"id": "Q2", "text": "面积是 $12\\pi$ 平方厘米", "x": 32, "y": 121, "w": 120, "h": 18, "form": {"size": 6}}]}
-```
-- Check with `inko.py layout --spec answers.json --preview answers-preview.png` (`unplaced` must be 0: enlarge a box
-  or shrink `form.size` otherwise), generate, then write the page onto the worksheet photo:
-```bash
-python $S/compose.py page --job inko-output/<run> --sheet blanks.json -o answered.jpg
-```
-For one or two answers, generating a small page and `compose.py place page-1.png --onto worksheet.jpg --box x,y,w,h`
-is quicker than a layout.
-
----
-
-## 4. Notes / handout → handwritten PDF
-
-- Read the notes file. Clean it for handwriting: drop markdown symbols (#, *, tables → short lines), keep headings as
-  their own lines, number lists as "1. ", keep formulas as `$…$` (then model = logic-1).
-- Long material: say the page count and price from the quote before generating (20,000 characters / 60 pages per job;
-  split bigger ones into chapters).
-- Plain mode is quickest: `python $S/inko.py generate --file notes.txt --paper grid --size small` → `inko.pdf` is the
-  PDF. But plain mode indents **every line** by two characters, so headings, numbered points
-  and short notes all start indented. For a tidy notes page use a layout (`assets/layouts/notes-blank.json`: centred
-  title, `"indent": 0`) — on `blank`/`ruled8`, or on squared paper via `paper.py make --kind grid --json` + compose
-  (`paper-matching.md` §8). `small` fits 5 mm squares better than `medium`.
-- Notes are many left-aligned lines: `python $S/compose.py drift --job inko-output/<run> -o notes-final` loosens the
-  ruler-straight left edge and writes the PDF again from the drifted pages — deliver that one (copy it to a good name).
-  Not needed after `compose.py lines`, which drifts already.
-- Want it to look photographed page by page: `photo.py` each PNG with `--preset scan` or `flat`, then
-  `pdf.py page-*-photo.jpg -o notes.pdf`.
-
----
-
-## 5. Letter, card, postcard
-
-- lyric-1 (unless formulas). Paper `letter` (red lines, header) or `ruled8`/`blank`; cream paper feels warmer.
-- Title centred and larger: `marks` with `{"scale": 1.3, "align": "center"}` on the title's character range.
-- Greeting on its own line with no indent (`marks` `{"indent": 0}`), closing phrases right-aligned, name and date in
-  right-aligned `own` text boxes near the bottom (see `assets/layouts/letter.json`).
-- A name at the end of a letter is fine; reproducing a signature is not (content filter + ethics).
-- Delivered as generated: `compose.py drift` first, so the body's left edge isn't ruler-straight.
-- Card / postcard: write the text in a box of the card's size on blank A4, then put it on a photo of the card with
-  `compose.py place page-1.png --onto card.jpg --box x,y,w,h` (the label is re-applied on the card image). Don't crop
-  the A4 page down to the card — that would cut the label off.
-
----
-
-## 6. Essay on 作文纸, 田字格 practice
-
-- `paperId: "compo"` (400-cell grid, 20 × 20, one character per cell) or `"tian"` (田字格, 14 mm cells, for practice).
-- Title: `marks` `{"align": "center"}` on the title; paragraphs start with two empty cells automatically (`d.indent` 2).
-- Count: 400 cells per page; tell the user how many pages the quote says.
-- Grade-school feel: a neat, rounder handwriting (`styles.md`), pencil pen type for younger students.
-- No `compose.py drift` here (it refuses these papers): on 作文纸 / 田字格 every character belongs in its cell.
-
----
-
-## 7. Photo-like, scanned, photocopied
-
-```bash
-python $S/photo.py page-1.png -o photo.jpg --preset desk      # angled phone photo on a wooden desk, lamp light
-python $S/photo.py page-1.png -o photo.jpg --preset flat      # from straight above, homework-app style
-python $S/photo.py page-1.png -o photo.jpg --preset notebook  # bound notebook page: spine shadow and curl
-python $S/photo.py page-1.png -o scan.jpg  --preset scan      # scanner look
-python $S/photo.py page-1.png -o copy.jpg  --preset copy      # grey photocopy
-```
-- Which one: `flat` is the clearest (every word readable — good for homework apps and sending to someone who must read
-  it); `desk` looks most like a casual snapshot (far edge slightly soft); `scan` for documents; `notebook` when the page
-  should look bound.
-- Drift first, photograph second: `compose.py drift --job inko-output/<run> -o drifted`, then `photo.py` on the
-  drifted pages. A camera makes a ruler-straight left edge easier to spot, not harder.
-- `--background their-desk.jpg` uses the user's own table photo; `--seed N` gives a different variation; `--tilt`,
-  `--roll`, `--light warm|daylight|lamp|cloudy`, `--shadow`, `--curl`, `--noise` fine-tune.
-- For the most convincing result, compose onto a photo of the user's real paper first (recipe 2) — that photo already has
-  real lighting and texture — and skip `photo.py`.
-- The label is taken off the paper (the paper under it is rebuilt, ruled lines and grid included) and placed on the
-  photo at ≥ 5 % of its shortest side — in the image corner, or just inside the sheet's corner when the corner would
-  straddle the sheet's edge. That is intended.
-
----
-
-## 8. Copying practice (抄写) and long texts
-
-- Split long texts at paragraph boundaries into jobs of ≤ 20,000 characters; one job per chapter keeps rewrites cheap.
-- 抄写 N 遍: repeat the text N times in `text` with a blank line between copies (priced per character, so say the total).
-- Same handwriting across jobs: pass the same `--style`; for the same "hand on the same day" look also keep `--pen-*`.
-- Page after page of left-aligned lines: `compose.py drift` each job before delivering (the same `--drift-amount` for
-  every job, so the hand stays consistent).
-
----
-
-## 9. Change the look without paying again
-
-```bash
-python $S/ink.py restyle page-1.png -o blue.png --color blue --texture ballpoint
-python $S/ink.py restyle page-1.png -o bold.png --weight 0.6            # thicker; negative = thinner
-python $S/ink.py restyle page-1.png -o light.png --darkness -0.4        # lighter ink
-python $S/ink.py restyle page-1.png -o red.png --color "#b3261e" --texture gel
-```
-Offer 2–3 variants side by side when the user is unsure; they're instant. For a completely different handwriting or
-fixing badly written characters, use `inko.py rewrite JOB_ID` (free once per job) or a new generation.
-
----
-
-## 10. English or mixed-language pages
-
-- Both models write English letters, digits and punctuation; lyric-1 has the widest choice of handwriting.
-- Keep straight quotes and ASCII punctuation in English passages; Chinese punctuation in Chinese sentences.
-- Very long English words don't break across lines; prefer shorter lines or a smaller `size`.
+Prefer `scene.py inspect` then `tighten`, `move`, `scale`, `pen` and `render` for spacing and appearance fixes.
+`ink.py restyle` changes a whole page's colour, weight or pen texture; `ink.py extract` creates a transparent
+handwriting layer for two-dimensional design. `compose.py drift` is an optional line-position edit only; it never
+adds depth or a camera effect. Regenerate only for errors that these flat-page tools cannot fix, within the budget.

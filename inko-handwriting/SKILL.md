@@ -1,20 +1,18 @@
 ---
 name: inko-handwriting
 description: >-
-  Real-looking handwriting from text, notes, letters, essays and math solutions via the Inko API (inkotype.com), plus
-  local post-processing: write exactly on the lines of the user's own ruled paper (from a photo), make it look photographed
-  or scanned, change ink colour / pen / stroke weight, fill answers into a worksheet, export PDF. Use this skill whenever
-  the user wants anything hand-written — 手写, 手写体, 手写字, 写成手写, 帮我写/抄到纸上, 手写作业, 手写笔记, 手写信, 字迹,
-  写在横线纸/作文纸上, 做完题出手写图片, 拍照效果, "make it look handwritten", "write this on my notebook paper", "solve this
-  and hand-write the steps", "handwritten PDF" — even if they never say "Inko".
+  Generate standard flat handwritten PNG pages and PDFs from text, notes, letters, essays and math solutions via
+  Inko (inkotype.com). Choose paper, handwriting and pen; edit layout and ink locally. Use for 手写、手写作业、
+  手写笔记、手写信、二维手写图片、handwritten pages or handwritten PDF. Input images may be read for their content;
+  output is always a flat page, without camera effects or compositing into real-world scenes.
 ---
 
 # Inko handwriting
 
 Inko writes text the way a person does — real pen strokes, not a font — and returns A4 pages (PNG + PDF, 300 dpi).
 This skill makes you the expert operator: you prepare the content, pick paper / size / handwriting / pen with the user,
-pay only after they agree, and then turn the white pages into whatever they actually need (their own notebook page,
-a phone photo, a worksheet with answers filled in, a PDF).
+pay only after they agree, and deliver standard flat page images or PDFs. Preserve the natural handwriting,
+not a simulated camera: no perspective, desk scenes, shadows, page curl, scanner effects or photo compositing.
 
 All scripts are in `scripts/` next to this file (call them with the path you installed to, e.g.
 `python .claude/skills/inko-handwriting/scripts/inko.py …`). They print JSON on stdout — read it, don't guess.
@@ -77,7 +75,7 @@ python scripts/inko.py doctor          # Python deps, API reachable, key valid, 
 ## Workflow
 
 1. **Understand the goal**: what content, for what (homework to hand in, notes, a letter, a mock-up…), on what paper,
-   and the final form (image of their paper, photo-like, PDF, plain pages).
+   and the final form (flat PNG pages, PDF, or both). Images supplied as questions are input material only.
 2. **Prepare the content** (the part users value most — see the scenario guides below). For math, solve it and write
    the solution the way a student writes it, not the way a textbook typesets it: each formula on the same line as its
    lead-in (`所以 $x=4$`, `移项得 $2x=8$`), never `$$…$$` (a centred line of its own — textbook look), no full stops
@@ -90,8 +88,8 @@ python scripts/inko.py doctor          # Python deps, API reachable, key valid, 
    its formula), show the preview if placement matters.
 6. **Generate** (`inko.py generate … --yes`) → pages land in `./inko-output/<time>-<id>/` with `job.json` (and
    `plan.json` for layout jobs).
-7. **Post-process** as needed (table below) — real handwriting isn't ruler-aligned, so a page of left-aligned lines
-   delivered as it is gets drift (`scene.py drift` when the job came with `scene.zip`, else `compose.py drift`) →
+7. **Post-process** only as needed (table below). Keep the generated page flat; optional line-position adjustment
+   uses drift (`scene.py drift` when the job came with `scene.zip`, else `compose.py drift`) →
    **look at the result** → deliver file paths, cost, and what the user can tweak next ("bluer ink? bolder strokes?
    a different handwriting? move something yourself in the editor?").
 
@@ -117,7 +115,7 @@ Without `--model`, `inko.py` picks this way automatically and says so in its out
 4. Nothing saved: filter by what the job needs (`references/styles.md`). Never settle for the fallback: Lyric's is No.001,
    one of the most casual, joined-up hands.
 
-On their own paper, prefer whichever of these resembles the writing already on it. When the user says 「以后都用这个」,
+When the user says 「以后都用这个」,
 save it for them: `inko.py default-style CODE` (it changes their account, the website included — only on request).
 
 ## Plain pages or a custom layout?
@@ -128,10 +126,10 @@ save it for them: `inko.py default-style CODE` (it changes their account, the we
   only here.
 - **Layout** (`--layout layout.json`): exact size in mm, line spacing, margins, ruled / 作文纸 / 田字格 / letter paper,
   titles centred and bigger, no indent, text boxes anywhere (answers, name, date), writing along a curve,
-  per-character pen or handwriting. Required whenever the result must match real paper. Read `references/layout.md`;
+  per-character pen or handwriting. Use when exact page placement matters. Read `references/layout.md`;
   templates are in `assets/layouts/`; `inko.py` accepts shorthands so you never count character positions. Check with
-  `inko.py layout --spec layout.json --preview preview.png` (free, local preview). Squared paper with a layout: generate
-  on `blank` and compose onto `paper.py make --kind grid --json` (see `references/paper-matching.md` §8).
+  `inko.py layout --spec layout.json --preview preview.png` (free, local preview). For squared paper,
+  use plain `--paper grid`; custom layouts currently use the built-in flat paper types.
 
 ## Ask the user (only what's missing)
 
@@ -141,10 +139,10 @@ Put the open questions in **one** message, with your suggested default for each,
 - **Handwriting**: if they have a usable 常用字迹, just say you'll use it (no question needed). Otherwise offer 2–4
   candidates as a contact sheet — favourites first (`inko.py styles --favorites` / `inko.py styles …` + `inko.py previews
   CODES`) — or ask "工整 / 自然 / 潦草，偏圆还是偏方？"; their own custom handwriting if they have one (lyric-1).
-- **Paper & size**: white / cream / grid / ruled 8 mm / 7 mm / 作文纸 / 田字格 / letter, or **their own paper** (photo);
+- **Paper & size**: white / cream / grid / ruled 8 mm / 7 mm / 作文纸 / 田字格 / letter;
   character size (small ≈ 6 mm, medium ≈ 7 mm, large ≈ 8.5 mm tall).
 - **Pen**: original / gel 中性笔 / ballpoint 圆珠笔 / fountain 钢笔 / pencil 铅笔; black / blue / blue-black; thinner–bolder.
-- **Output**: plain pages / on their paper photo / photo-like (desk, straight-down, scan, photocopy) / PDF.
+- **Output**: standard flat PNG pages / PDF / both.
 - **Price** (always, before submitting).
 
 If the user said "you decide" or the request is clear, decide, state your choices in one line, and only confirm the price.
@@ -154,35 +152,27 @@ If the user said "you decide" or the request is clear, decide, state your choice
 | Need | Command |
 |---|---|
 | Fix spacing / position / size / pen of glyphs or lines, natural left edges — without regenerating (job has `scene.zip`, the default) | `scene.py inspect RUN/scene.zip` → `tighten` / `drift` / `move` / `pen` … → `scene.py render RUN/scene.zip -o final --pdf`; let the user drag things themselves: `scene.py editor RUN/scene.zip` (a Chinese page in their browser). See `references/scene.md` |
-| Natural left edges when there is no `scene.zip` | `compose.py drift --job RUN -o drifted` before `photo.py` / `ink.py`; not after `compose.py lines` (it drifts already), not on 作文纸 / 田字格 |
-| Write on the user's own ruled paper (photo or scan) | `paper.py analyze` → generate with its `suggested_layout` → `compose.py lines` (see `references/paper-matching.md`) |
-| Answers into blanks of a worksheet photo | `paper.py blanks` → layout boxes at those mm → `compose.py page` (or `compose.py place` per answer) |
-| Looks photographed / scanned / photocopied | `photo.py page.png -o photo.jpg --preset desk\|flat\|notebook\|scan\|copy` |
+| Natural left edges when there is no `scene.zip` | `compose.py drift --job RUN -o drifted` before `ink.py`; not on 作文纸 / 田字格 |
 | Other ink colour, pen texture, bolder/thinner, lighter/darker | `ink.py restyle page.png -o out.png --color blue --texture ballpoint --weight 0.4` |
 | Transparent handwriting layer (for design tools) | `ink.py extract page.png -o ink.png` |
-| A paper Inko doesn't offer (B5 notebook, yellow legal pad, dotted) | `paper.py make … --json paper.json` then `compose.py lines` |
-| PDF of edited/composed images | `pdf.py a.png b.jpg -o out.pdf --size A4` |
+| PDF of edited flat-page images | `pdf.py a.png b.jpg -o out.pdf --size A4` |
 
 Prefer the API's own `pen` options (`--pen-type/--pen-color/--pen-weight/--pen-ink`) when generating — they are applied at
 full quality; use `ink.py` for colours the API doesn't have (red, green, purple, #hex), textures like marker, or quick
-"what if" variants without paying again. When composing onto a photo, `compose.py` picks the ink colour itself
-(`--color auto`: the job's pen colour, else the colour of the writing already on the paper, else real-pen darkness) —
-Inko's page inks are rendered lighter than ink looks in a photo, so don't force `--color page` there. It also puts the
-label in a corner without new handwriting. Details and recipes: `references/postprocess.md`.
+"what if" variants without paying again. All edits stay on the flat page. `paper.py make` can draw a separate
+standard paper background; it does not paste handwriting into a photo. Details: `references/postprocess.md`.
 
 ## Scenario guides
 
-Read the one that matches before you start — they contain the judgement calls that make results look genuinely real.
+Read the relevant guide for content and flat-page layout decisions.
 
-- `references/scenarios.md` — end-to-end recipes: math homework from a photo, notes → handwritten PDF, own notebook
-  paper, worksheet answers, letter/card, essay on 作文纸, copying (抄写) practice, "make it look like a phone photo".
+- `references/scenarios.md` — math answers, notes, letters, essays and copying practice as flat pages or PDF.
 - `references/writing-math.md` — how students actually write solutions (解/由…得/所以/答), detail levels, the Logic
   symbol table, substitutions for unsupported symbols, LaTeX pitfalls.
 - `references/writing-text.md` — paragraphs, punctuation, letters, essays, English text, line breaks that look natural.
 - `references/styles.md` — choosing a handwriting from descriptions ("工整好看", "像男生写的", "潦草"), facets, previews.
 - `references/layout.md` — the layout JSON (papers, `d`, boxes, marks, pens), recipes, reading the plan.
-- `references/paper-matching.md` — the user's own paper end to end, photo tips, fixing misalignment.
-- `references/postprocess.md` — ink / photo / pdf / compose options with examples.
+- `references/postprocess.md` — ink / PDF / optional flat-page drift options with examples.
 - `references/scene.md` — the editable glyph package (`scene.zip`): inspect, tighten gaps, drift, move, restyle, the
   browser editor for the user, rendering with the label.
 - `references/api.md` — endpoints, parameters, limits, billing, job states, files and expiry.

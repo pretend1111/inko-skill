@@ -16,7 +16,7 @@ typeset structure, markdown leftovers, odd punctuation. Clean the text first.
   Don't indent or align with spaces — use `indent` (layout `d` or a `line` mark) or `align`. Two half-width spaces
   between date / weekday / weather in a diary heading look natural.
 - Every line starts at exactly the same x, which no hand does. Don't fake an uneven left edge with spaces or tiny
-  indent marks; run `compose.py drift` on the finished pages (`postprocess.md`; `compose.py lines` does it already).
+  indent marks; run `compose.py drift` on the finished pages (`postprocess.md`).
 
 ## Punctuation
 

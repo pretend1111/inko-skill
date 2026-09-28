@@ -1,6 +1,4 @@
 # inko.py (the API client) needs only the Python standard library (3.9+).
-# The image scripts (preview, ink, paper, compose, photo, pdf) need:
+# The image scripts (preview, ink, paper, compose, scene, pdf) need:
 pillow>=9.1
 numpy>=1.22
-# Optional — more robust sheet detection in paper photos:
-# opencv-python-headless>=4.6

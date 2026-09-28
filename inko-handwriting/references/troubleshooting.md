@@ -41,16 +41,7 @@ Failed jobs are refunded automatically; say so when reporting a failure.
 | no `scene.zip` next to the pages | the job was generated with `--no-scene`, by a logic-1 plain job (not supported yet), or on an older server: regenerate with a layout, or use `compose.py drift` / `ink.py` on the PNG |
 | `this script needs Pillow and numpy` | `python -m pip install -r scripts/requirements.txt` |
 | boxes/text in previews show as squares | no CJK font found: set `INKO_FONT=/path/to/NotoSansCJK.ttc` (only affects previews/overlays, not the handwriting) |
-| `paper.py analyze` finds no lines (`kind: blank`) | faint or dotted lines: better light / a scan, `--line-mm N`; dotted paper has no lines to snap to — use `compose.py page` |
-| sheet straightened wrongly (odd crop in `*-flat.png`) | pass `--corners x1,y1,x2,y2,x3,y3,x4,y4` (TL, TR, BR, BL) or `--no-rectify` |
-| lines found but numbered from a header rule | lines marked grey (not regular) are ignored automatically; use `--start-line` |
-| text too high/low on the lines | `compose.py lines --lift 0.08` (lower) / `0.2` (higher) |
 | lines too long for the paper | generate with `suggested_layout` margins; or `--scale 0.95` |
-| "text continues on another copy" | more text than free lines: give another sheet `--paper a.json b.json`, `--every 1`, or shorter text |
-| label lands on handwriting | `--label-corner bl` (or tl/tr); never remove it |
-| composite looks too crisp/clean in a blurry photo | `--soften 1.0`, `--grain 4` |
-| ink on the photo looks faded / greyer than real pen | don't use `--color page`; default `auto` uses real-pen darkness; or `--color match` / `--darkness 0.3` |
-| new writing looks like a different person than the lines already written | pick a handwriting closer to it (`paper-matching.md` §3); `--color match` |
 | units / letters after a formula float like an exponent | put the unit inside the formula (`$5\,cm$`) or write it in Chinese |
 | `math_style` warnings in the quote / layout output (logic-1) | not blocking, but fix them before paying: `display_formula` → write the `$$…$$` formula inline after its lead-in; `full_stop` → delete every `。．.` from the solution (commas at most); `orphan_lead` → join the lead-in (所以 / 得 / `：` …) and the formula into one line. Follow each warning's `fix`, then run the free check again (`writing-math.md` §1). Prose that merely contains a formula (notes, a letter) keeps its `。` — ignore `full_stop` there |
 | `formula_splits` in the output | inko.py cut a long `=` / `≤` … chain into pieces so it can continue on the next line — intended. To keep formulas in one piece, `--keep-formulas` (a long one then moves whole or is squeezed) |
@@ -58,7 +49,7 @@ Failed jobs are refunded automatically; say so when reporting a failure.
 | `所以` left alone at a line end, or layout warnings `mshrink` / `mtiny` | a formula didn't fit and wasn't cut: no top-level relation to cut at (only one at its very start, or all inside brackets / fractions), `--keep-formulas`, or see `formula_note`. Start that step on a line of its own, or cut it yourself before a relation (`$A$ $=B$`). `mshrink` on a formula you scaled up on ruled paper is expected (the line spacing caps its height) |
 | a centred formula on its own line in the result (`mexpand` in the layout warnings) | `$$…$$` was used — make it inline after its lead-in; for a bigger fraction use a mark with `f.scale` |
 | `compose.py drift` refuses: page already drifted | the pages were drifted before — drift the job's original pages instead; `--force` only if you really mean to drift again |
-| drift looks too strong / too weak | `--drift-amount 0.6` / `1.4` (same flag on `compose.py lines`); `--drift random` for a small wobble without the steady creep; another `--seed` for a new variation |
+| drift looks too strong / too weak | `--drift-amount 0.6` / `1.4`; `--drift random` for a small wobble without the steady creep; another `--seed` for a new variation |
 | left edges still ruler-straight | the pages weren't drifted: `compose.py drift --job RUN -o drifted` (not spaces or tiny indent marks) |
 | need to check a PDF but can't open it | `inko.pdf` = the same pages as the PNGs — check those; for `pdf.py` output, render with PyMuPDF if installed (`python -c "import fitz; …"`) |
 | huge PDF pages | images without dpi use A4; set `--size A4` explicitly |

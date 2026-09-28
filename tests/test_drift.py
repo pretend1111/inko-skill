@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for natural left edges: `compose.py drift` (Inko pages as delivered) and `compose.py lines --drift`.
+"""Tests for natural left edges: `compose.py drift` (Inko pages as delivered).
 Offline, CPU only, no API key.
 
     python tests/test_drift.py            # outputs in tests/_out/drift/
@@ -359,52 +359,6 @@ def main() -> int:
         keep[int(0.88 * H):, int(0.4 * W):] = False                          # the label corner
         assert keep.sum() > 10000 and np.array_equal(before[keep], after[keep]), "grid changed"
         paper_left_clean(OUT / "grid_out" / "page-1.png", OUT / "job_grid-paper.png")
-
-    # ── compose.py lines --drift on the user's own ruled paper ─────────────
-    jl = OUT / "job_lines"
-    lines_l = ["今天的作业 homework notes", "1. first answer line", "the second line of it", "and a third line here",
-               "2. another problem", "its working goes here", "and one more line", "the end of the notes"]
-    build_page(jl, lines_l, s_mm=4.96, pitch_mm=8.0, left_mm=20.0, first_base_mm=30.0, pid="drift-lines")
-    (jl / "layout.json").write_text(json.dumps({"text": "\n".join(lines_l), "paperId": "blank",
-                                                "d": {"size": 4.96, "line": 8.0 / 4.96, "margins": [22, 45, 26, 20]}}), encoding="utf-8")
-
-    @test("compose.py lines --drift natural vs none: shifts match check.drift_mm, never left of the margin line")
-    def _():
-        ok(S / "paper.py", "make", "-o", OUT / "b5.png", "--kind", "ruled", "--size", "B5", "--pitch", "8", "--margin-line", "20",
-           "--paper", "cream", "--json", OUT / "b5.json", "--dpi", "200")
-        pj = json.loads((OUT / "b5.json").read_text(encoding="utf-8"))
-        rn = ok(S / "compose.py", "lines", "--job", jl, "--paper", OUT / "b5.json", "-o", OUT / "b5-none.png", "--color", "blue",
-                "--drift", "none")
-        rd = ok(S / "compose.py", "lines", "--job", jl, "--paper", OUT / "b5.json", "-o", OUT / "b5-drift.png", "--color", "blue")
-        assert rd["drift"]["mode"] == "natural" and rn["drift"]["mode"] == "none"
-        assert 5 in rd["drift"]["reanchored_lines"], rd["drift"]              # "2. another problem"
-        cn, cd = rn["outputs"][0]["check"], rd["outputs"][0]["check"]
-        assert len(cd) == len(lines_l) and all(c["drift_mm"] == 0 for c in cn), cn
-        dmm = np.array([c["drift_mm"] for c in cd])
-        assert (dmm >= 0).all() and dmm.std() > 0.15 and np.abs(dmm).max() <= 0.5 * 4.96, dmm
-        ppm_p, p = pj["px_per_mm"], pj["pitch_px"]
-
-        def lefts(path):
-            a = np.asarray(Image.open(path).convert("RGB"), np.float32)
-            blue = (a[..., 2] - a[..., 0] > 40) & (a[..., 2] < 200)
-            out = []
-            for k in range(len(lines_l)):
-                y = pj["lines"][k]["y"]
-                cols = np.flatnonzero(blue[int(y - 0.9 * p):int(y)].sum(0) >= 2)
-                out.append(cols[0])
-            return np.array(out, float)
-        ln, ld = lefts(OUT / "b5-none.png"), lefts(OUT / "b5-drift.png")
-        assert np.abs((ld - ln) / ppm_p - dmm).max() < 0.2, np.round((ld - ln) / ppm_p - dmm, 3)
-        assert (ld > pj["margin_line_x_px"] + 2).all(), "writing crossed the margin line"
-        assert open_image(OUT / "b5-drift.png")[1]["drift"]["by"] == "compose.py lines"
-        assert open_image(OUT / "b5-none.png")[1]["drift"] is None
-
-    @test("compose.py lines on pages already drifted: not drifted a second time")
-    def _():
-        ok(S / "compose.py", "drift", "--job", jl, "-o", OUT / "lines_drifted")
-        r = ok(S / "compose.py", "lines", "--job", OUT / "lines_drifted", "--paper", OUT / "b5.json", "-o", OUT / "b5-twice.png")
-        assert r["drift"]["mode"] == "none" and "note" in r["drift"], r["drift"]
-        assert all(c["drift_mm"] == 0 for c in r["outputs"][0]["check"])
 
     width = max(len(n) for n, _, _ in RESULTS)
     fails = 0
