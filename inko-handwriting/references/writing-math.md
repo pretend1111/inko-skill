@@ -18,7 +18,9 @@ A handwritten solution that looks real is shaped like the student's thinking, no
   after the `答` line. Commas (`，`) between clauses at most; line ends carry no punctuation. Numbering (`1.`) and decimals
   (`$3.5$`) are fine. Ordinary prose (letters, essays, diaries) keeps its `。` as usual.
 - The problem number and `解：` share the first line: `1. 解：…` (not `1.` alone on a line).
-- Reasons in words, not symbols-only: 因为… 所以…, 由①得, 代入得, 移项得, 两边同除以 2 得.
+- Because / therefore the way students write them: `∵ … ∴ …` (text characters, outside `$…$`) — the usual form in
+  geometry proofs and step-by-step derivations: `∵ $OD=OE$`, `∴ △ODC ≌ △OEC`. 因为 / 所以 in words only in prose-like
+  explanations. Other lead-ins stay in words: 由①得, 代入得, 移项得, 两边同除以 2 得.
 - Equalities chained down the page: first line `原式 $= …$`, next lines start with `$=…$`.
 - No typographic luxury: no `\left( \right)` sizing, no aligned environments, no boxed answers, no colour.
 - Numbering like the assignment: `1.` / `(1)` / `第 3 题`; sub-questions `(1)`, `(2)` on their own lines.
@@ -37,9 +39,9 @@ A handwritten solution that looks real is shaped like the student's thinking, no
 | 适中 | normal homework | the key transformations and the result; routine arithmetic done in one step |
 | 简洁 | answers-only style, quizzes, scratch work | the essential equation(s), the result, very few words |
 
-For proofs: 证明： … 所以 … 得证 / 证毕. For geometry: name the figure in words (在 △ABC 中), cite reasons in
-parentheses after the step: `所以 $AB=AC$（等角对等边）`. `∠` can't be written — angles in words:
-`角 1 = 角 2（对顶角相等）` (§6).
+For proofs: 证明：∵ … ∴ … 得证 / 证毕. For geometry: name the figure in words (在 △ABC 中), cite reasons in
+parentheses after the step: `∴ $AB=AC$（等角对等边）`. `∠` can't be written — angles in words:
+`角 1 = 角 2（对顶角相等）` (§6). Degrees with logic-1: just type `60°` (see §6).
 
 ## 3. Chinese school conventions
 
@@ -47,7 +49,7 @@ parentheses after the step: `所以 $AB=AC$（等角对等边）`. `∠` can't b
 - Equations: `去分母得`, `移项得`, `合并同类项得`, `系数化为 1 得`, `所以 $x=…$`.
 - Inequalities: final `所以不等式的解集为 $x>2$`; `\geq` / `\leq`, not the slanted `\geqslant` / `\leqslant` (§6).
 - Functions: `令 $f'(x)=0$，得 …`, monotonic intervals `在 $(0,1)$ 上单调递增`.
-- Geometry reasons in （） after the statement; ∵ / ∴ are fine as **text** characters (outside `$…$`).
+- Geometry reasons in （） after the statement; ∵ / ∴ as **text** characters (outside `$…$`), preferred over 因为 / 所以.
 - Multiple answers: `$x_1=2$，$x_2=3$` (Chinese comma between formulas).
 - **Units belong inside the formula** (`$x\,cm$`, `$40cm^2$`) or in Chinese (`5 厘米`). Latin letters written as plain
   text right after a formula (`$x$ cm`) are placed like a superscript and look like an exponent.
@@ -185,7 +187,8 @@ $A^{-1}=\begin{pmatrix}1&-2\\0&1\end{pmatrix}$
 Outside `$…$` (plain text) both models write Chinese, English, digits, full/half-width punctuation and the symbols of
 the Chinese handwriting set, e.g. `∵ ∴ △ ⊥ ∥ ≈ ≠ ≥ ≤ × ÷ ± √ ∞ ∈ ∪ ∩ ≡ → ℃ % ‰ ①②③ ……`. Greek letters and
 `⊂ ⊆ ∅ ∀ ∃ ⇒` belong inside `$…$`: substituted glyphs and fallbacks are only used in formulas. Not writable anywhere:
-`∠` (write 角), `°`, `² ³` (superscript digits), `½`, `Ⅰ Ⅱ Ⅲ`, `⑴`, `㈠`, `「」`.
+`∠` (write 角), `² ³` (superscript digits), `½`, `Ⅰ Ⅱ Ⅲ`, `⑴`, `㈠`, `「」`. The degree sign `°` in plain text works with
+logic-1 only (`角 AOC = 60°`: written as the writer's own small raised o, right next to the number); lyric-1 can't.
 
 ## 6. Substitutions
 
@@ -204,8 +207,8 @@ Same sign, another command — use the one Logic knows:
 
 | Wanted | Write instead |
 |---|---|
-| `90°`, `^\circ`, `\degree` | `$90^{o}$` (a small raised o looks exactly like a handwritten degree sign, in the writer's own hand), or `90 度`; `^\circ` works too, with a substituted glyph |
-| `\because`, `\therefore` | text `∵` / `∴` outside `$…$`, or 因为 / 所以 |
+| `90°`, `^\circ`, `\degree` | logic-1: `90°` as plain text is fine (written as `$90^{o}$`: a small raised o in the writer's own hand, exactly like a handwritten degree sign); with lyric-1 `90 度`; `^\circ` works too, with a substituted glyph |
+| `\because`, `\therefore` | text `∵` / `∴` outside `$…$` (preferred in proofs and derivations), or 因为 / 所以 |
 | `\angle ABC`, `∠1` | 角 in words: `角 ABC`, `角 1 = 角 2` — `∠` can't be written, not even as plain text |
 | `\triangle ABC` | text `△ABC`, or `$\Delta ABC$` |
 | `\cong` (全等) | 全等 in words: `△ABC 全等于 △DEF` |
