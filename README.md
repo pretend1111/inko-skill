@@ -2,6 +2,12 @@
 
 **[简体中文 → README.zh-CN.md](README.zh-CN.md)**
 
+**1.4.0 (2026-10-05): caught up with the website's assistant.** English handwriting retrained; long formulas wrap at
+`=` / `+` instead of shrinking, and generated formulas match the text size; Logic can have its own 常用字迹
+(`default-style CODE --model logic-1`); a table of what the models can't write and how the agent asks about it; math jobs
+never stop to ask about model/handwriting compatibility; new `inko.py delivered` for the API's delivery confirmation;
+label-free pages need only the signed agreement.
+
 **1.3.0: standard flat page images and PDFs only.** Camera simulation, scene backgrounds, perspective, paper curl,
 scan/photocopy effects and compositing onto photographs have been removed.
 
@@ -23,7 +29,8 @@ See [math support](inko-handwriting/references/writing-math.md).
    *"Install the handwriting skill from https://github.com/pretend1111/inko-skill — my Inko API key is ink_live_…"*
 3. Ask for handwriting. The agent always shows you the price before anything is charged
    (¥0.002 per character, i.e. ¥2 per 1000, at least 100 characters per job; quotes and previews are free). It is pure
-   pay-as-you-go from your Inko balance — no subscription or membership; new accounts get ¥3 to try it out.
+   pay-as-you-go from your Inko balance — no subscription or membership; accounts registered with a QQ mailbox get ¥3
+   to try it out.
 4. Optional: in the website's 字迹库, set a **常用字迹** (your default handwriting) and ★ favourites. The agent writes in
    your 常用字迹 unless you ask for another, and picks from your favourites when it has to choose. Say
    *"以后都用这个字迹"* and it saves the new one for you.
@@ -84,7 +91,7 @@ of retired scripts, without touching API keys.
 - **AI labels**: every Inko page carries a visible 「AI生成 · Inko」 label and hidden AIGC metadata as required by Chinese
   law (GB 45438-2025). The scripts keep both on every derived image and PDF and re-apply the visible label at the
   required size; please don't remove them. Pages without the visible label are only available to accounts that
-  bought a custom-handwriting seat and signed the AI-labelling agreement on the website (the metadata stays).
+  signed the AI-labelling agreement on the website (the metadata stays).
 - Inko refuses IOUs, receipts, contracts, certificates, leave notes and signatures (not charged).
 
 ## Development

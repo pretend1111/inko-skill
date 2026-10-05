@@ -38,6 +38,7 @@ A handwritten solution that looks real is shaped like the student's thinking, no
 | 详细 | handing in / showing understanding / someone learning it | every transformation, the reason for it, checks (检验), final 答 |
 | 适中 | normal homework | the key transformations and the result; routine arithmetic done in one step |
 | 简洁 | answers-only style, quizzes, scratch work | the essential equation(s), the result, very few words |
+| 只写答案 | "只写最终答案" | the results only, numbered like the source: no question, working, checks or 解 / 答 prefixes; plain numbers can use lyric-1 |
 
 For proofs: 证明：∵ … ∴ … 得证 / 证毕. For geometry: name the figure in words (在 △ABC 中), cite reasons in
 parentheses after the step: `∴ $AB=AC$（等角对等边）`. `∠` can't be written — angles in words:
@@ -75,20 +76,24 @@ parentheses after the step: `∴ $AB=AC$（等角对等边）`. `∠` can't be w
 - Formula symbols are written smaller than Chinese characters (about 70 %), inline fractions about half a character
   tall — normal for handwriting. If one fraction must be bigger, scale that formula (matched as written, `$` included)
   with a mark instead of using `$$`: `{"match": "$\\frac{a+b}{2}$", "f": {"scale": 1.3}}`, and check the preview. On
-  ruled paper the line spacing caps its height: whatever the scale, it grows only about 10 % and the check warns
-  `mshrink` (expected there) — small fractions are normal in an exercise book.
+  ruled paper the preview caps its height by the line spacing (it warns `mshrink`, expected there). The generated page
+  writes every formula at its natural handwritten size, the same as the text around it (since 2026-10-04; at most about
+  2.2 character heights), placed right after the preceding word — so a tall formula can come out a little bigger than
+  in the preview. Give stacked fractions room with `line` (below).
 - Several lines of stacked fractions in a row (`$=\frac{9}{12}+\frac{10}{12}$` …) need more room: in an answer box give
   `"form": {"line": 2.2}` (default 1.7) so the fractions of neighbouring lines don't touch.
-- About 30 characters per ruled-8 mm line at the default size. The engine never breaks inside a `$…$`: a formula that
-  doesn't fit the rest of the line moves **whole** to the next line (leaving `所以` alone at the end of the line), and
-  one wider than a whole line (or too tall for the ruled line spacing) is squeezed (warnings `mshrink` / `mtiny`). A
-  space between two formulas (`$a=b$ $=c$`) is an ordinary break point.
+- About 30 characters per ruled-8 mm line at the default size. A formula that doesn't fit the rest of the line moves
+  **whole** to the next line (leaving `所以` alone at the end of the line). Since 2026-10-04 one wider than a **whole**
+  line is broken by the engine itself at its top level — before `=` `≤` `≥` … first, then before `+` / `−` — and each
+  piece keeps the normal size (the operator starts the next piece, as a student writes it). Only a formula with
+  nothing top-level to break at (one very wide fraction) is still squeezed (warnings `mshrink` / `mtiny`). A space
+  between two formulas (`$a=b$ $=c$`) is an ordinary break point.
 - **Automatic split (logic-1).** `inko.py` therefore cuts a formula wider than about 8 characters into as FEW pieces
   as possible and joins them with a space: a statement `LHS = …` is cut once before its first relation, so the left
   side follows the lead-in and the rest starts the next line — `所以 $I(a)=\int_0^\pi \ln(…)dx=\int_0^\pi \ln(…)dt=I(-a)$`
   → `所以 $I(a)$ $=\int…dx=\int…dt=I(-a)$`; a piece still longer than a line is cut again as late as possible (after a
-  `,` between statements, else before `=` `≤` … , else before a top-level `+`/`−`). Few cuts on purpose: each piece is
-  written in its own box, so every cut leaves a small gap. Nothing inside `{}`, `\frac`, `\sqrt`, scripts, brackets or
+  `,` between statements, else before `=` `≤` … , else before a top-level `+`/`−`). Few cuts on purpose: the space
+  between pieces stays visible when they end up on one line. Nothing inside `{}`, `\frac`, `\sqrt`, scripts, brackets or
   environments is ever cut; a formula with nothing top-level to cut at stays whole — if it jumps to the next line and
   leaves 所以 alone, start that step on a line of its own. The output's `formula_splits` lists what was
   split; `--keep-formulas` turns it off. Layouts that position text by raw numbers (`start`/`end` marks, `blocks`, box

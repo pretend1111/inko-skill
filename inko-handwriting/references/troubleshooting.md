@@ -18,7 +18,12 @@ Scripts print `error: …` on stderr. Start with `python scripts/inko.py doctor`
 | `style_not_ready` (409) | `default-style` with a custom handwriting that isn't finished on the website yet | pick another one, or wait until it's ready |
 | `no_slot` (403) | a custom handwriting that is no longer in one of the account's seats (a seat was refunded or taken back; each seat holds one custom handwriting) | pick another handwriting; to use this one again the user buys a seat (¥19.9) or deletes another custom handwriting on the website |
 | quote/job says `style.source: system` with a `style_note` | the user's 常用字迹 can't do this job (custom → Lyric only; not among the Logic 8; still training) | choose from their favourites (`styles --favorites`) or by description, and tell the user why |
-| `label_required` (403) | `--label none` without eligibility: that needs a custom-handwriting seat (专属字迹席位, bought on the website) **and** the signed AI-labelling agreement (《AI 生成内容标识协议》, also on the website) | use the default visible label; if the user really needs label-free pages, tell them both steps are theirs to do on inkotype.com |
+| `label_required` (403) | `--label none` without eligibility | the user signs the AI-labelling agreement (《AI 生成内容标识协议》) on inkotype.com first (no seat or purchase needed); until then generate with the label |
+| `style_gone` (409) | rewriting a job whose handwriting is no longer available | generate again with another handwriting (paid, after a quote) |
+| `idempotency_conflict` (409) | the `Idempotency-Key` was already used for a different request | drop `--idempotency-key` or use a new one |
+| `not_completed` / `not_api_delivery` (409) | `delivered` on a job that hasn't succeeded, or wasn't made through the API | wait for the job; website jobs need no confirmation |
+| `account_disabled` (403) | the account is disabled | the user contacts Inko support on the website |
+| `invalid_model` (400) | model other than `lyric-1` / `logic-1` | fix `--model` |
 | `rate_limited` (429) | too many requests | inko.py waits `Retry-After` and retries |
 | `too_many_active` (429) | concurrent job limit (1 job queued or running; 2 when the account has any topped-up balance — `api.md` → Limits) | wait for running jobs (`inko.py jobs`), then submit |
 | `daily_limit` (429) | this key's daily spending limit | tomorrow, or the user raises the limit on the website |

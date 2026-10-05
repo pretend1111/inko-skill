@@ -197,14 +197,15 @@ def main() -> int:
         p = inko.payment(1500, 300, {"balance_cents": 500, "quota_pages": 2.8})              # even older: quota_pages only
         assert p == "all ¥2.80 remaining quota + ¥0.20 from the balance (¥5.00 available, ¥4.80 left after this job)", p
         assert inko._money({"balance_cents": 0, "quota_pages": 2.8}) == {"balance_cents": 0, "quota_cents": 280}
-        # hints and help: no membership / subscription any more; label:none = a custom-handwriting seat + the agreement
+        # hints and help: no membership / subscription any more; label:none = the signed agreement only (since 2026-10, no seat)
         assert not any(re.search(r"member|subscri|会员|额度", h, re.I) for k, h in inko.HINTS.items() if k != "insufficient_balance")
         assert "top up" in inko.HINTS["insufficient_balance"] and "no membership" in inko.HINTS["insufficient_balance"]
-        assert "seat" in inko.HINTS["label_required"] and "agreement" in inko.HINTS["label_required"]
+        assert "agreement" in inko.HINTS["label_required"] and "no seat" in inko.HINTS["label_required"]
         assert "pricing#topup" in inko.HINTS["insufficient_balance"] and "seat" in inko.HINTS["no_slot"]
         assert inko.payment(12, 20, {"quota_cents": 5}) == "all ¥0.05 remaining quota + ¥0.15 from the balance"     # older server, no balance field
         h = run(S / "inko.py", "generate", "--help")["_stdout"]
-        assert "custom-handwriting seat" in re.sub(r"-\s+", "-", re.sub(r"\s+", " ", h)), h     # argparse may wrap at a hyphen
+        hh = re.sub(r"-\s+", "-", re.sub(r"\s+", " ", h))                                  # argparse may wrap at a hyphen
+        assert "AI-labelling agreement" in hh and "custom-handwriting seat" not in hh, h
 
     @test("inko.py catches swallowed LaTeX backslashes")
     def _():

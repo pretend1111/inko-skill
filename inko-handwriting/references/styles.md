@@ -7,17 +7,20 @@
   write common Chinese characters — the quote flags anything else). Making one needs a **custom-handwriting seat**
   (专属字迹席位) bought on the website: ¥19.9 per seat, a one-off purchase that never expires; one seat holds one custom
   handwriting (trained from the user's own samples, up to 2 trainings). Accounts start with no seat. The API can't
-  buy seats or enrol handwriting — send the user to inkotype.com for that.
+  buy seats or enrol handwriting — send the user to inkotype.com for that. A seat is only about custom handwriting;
+  it has nothing to do with the AI label.
 - **Logic 1** (`logic-1`): 8 curated handwritings per account, assigned at random and fixed. `inko.py styles --model
   logic-1` lists exactly those 8; any other code fails with `style_model_mismatch`.
-- Default when `--style` is omitted: the account's **常用字迹** if it supports the model; otherwise Lyric `No.001`, Logic
-  the lowest-numbered of the account's 8.
+- Default when `--style` is omitted: the account's **常用字迹** for that model if it supports the model (Logic can have its
+  own, see below); otherwise Lyric `No.001`, Logic the lowest-numbered of the account's 8.
 
 ## The user's own choices first
 
 Users keep two things on their Inko account (字迹库 on the website, or via the API):
 
-- **常用字迹** — one default handwriting (a preset or their custom one). Jobs without `--style` use it automatically.
+- **常用字迹** — the default handwriting (a preset or their custom one). Jobs without `--style` use it automatically.
+  Logic can have its own (one of the account's 8, set in 字迹库 or with `--model logic-1`); without it, Logic jobs use
+  the general one when it supports Logic. `/account` → `default_styles` says what each model really uses.
 - **收藏 (favourites)** — presets they liked. Nothing uses them automatically; they are your shortlist.
 
 ```bash
@@ -25,14 +28,17 @@ python scripts/inko.py default-style                 # show the 常用字迹 (+ 
 python scripts/inko.py styles --favorites            # favourites with facets and preview links
 python scripts/inko.py previews 12 37 105            # contact sheet of candidates to show the user
 python scripts/inko.py default-style 37              # only when the user asks: 「以后都用这个」
-python scripts/inko.py default-style --clear
+python scripts/inko.py default-style 5 --model logic-1   # Logic's own 常用字迹 (one of the account's 8)
+python scripts/inko.py default-style --clear [--model logic-1]   # both, or only that model's one
 ```
 
 Order of preference: what the user asks for in this request → 常用字迹 → a favourite that suits the job → a
 description filter (below). `inko.py quote` / `generate` report which handwriting a job will use (`style.source`:
 `request`, `default` = 常用字迹, `system` = fallback) and, when the 常用字迹 was skipped, why (`style_note`: a custom
 handwriting with `logic-1`, a preset that isn't among the account's Logic 8, a custom handwriting still training).
-`default-style` output lists the models it works with right now (`models`).
+`default-style` output lists the models it works with right now (`models`) and, per model, what a job without
+`--style` uses (`default_styles`). A Lyric-only choice never blocks a math job: use the Logic 常用字迹 / a Logic
+favourite / the Logic default and say so in one line (SKILL.md, "Pick the model").
 
 ## Facets (percentiles 0–100 among all handwritings)
 

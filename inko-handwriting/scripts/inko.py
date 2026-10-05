@@ -6,7 +6,8 @@
     python inko.py account                        balance / key limits / 常用字迹 / favourites
     python inko.py models [--symbols]             models, pricing, math symbols Logic can write
     python inko.py styles [--model M] [--favorites] [--where "neat>=60 beauty>=50"] [--sort -beauty] [--limit 12]
-    python inko.py default-style [CODE | --clear] show / set / clear the account's 常用字迹 (used when --style is omitted)
+    python inko.py default-style [CODE | --clear] [--model logic-1]   show / set / clear the 常用字迹 (used when --style is omitted;
+                                                  Logic can have its own one)
     python inko.py previews 12 37 88 [--model M]  download sample images (+ one contact sheet) to show the user
     python inko.py quote (--text T | --file F) [--model M] [--size S]           free
     python inko.py layout --spec layout.json [--model M] [--preview p.png]       free: validate + plan a custom layout
@@ -16,9 +17,11 @@
     python inko.py jobs [--limit N]
     python inko.py rewrite JOB_ID [--yes]         one free re-write per finished job (new random seed)
     python inko.py cancel JOB_ID
+    python inko.py delivered JOB_ID               after every wanted file is saved locally: let Inko delete its copies early
 
 logic-1 (quote / layout / generate): long =-chains inside $…$ are cut into pieces that can wrap, so they start right after
-所以 / 得 like a student's (formula_splits; --keep-formulas keeps them whole), and math_style warns about typeset habits
+所以 / 得 like a student's (formula_splits; --keep-formulas keeps them whole; the server's layout engine also breaks any
+formula wider than a whole line at =, ≤, + …), and math_style warns about typeset habits
 ($$ display formulas, full stops, 所以 / 得 left alone at the end of a line).
 
 Every command prints one JSON object on stdout; progress goes to stderr.
@@ -45,7 +48,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 DEFAULT_BASE = "https://api.inkotype.com/v1"
 UA = f"inko-skill/{VERSION} (+https://inkotype.com/developers)"
 TERMINAL = ("succeeded", "failed", "canceled")
@@ -203,8 +206,15 @@ HINTS = {
     "no_slot": "That custom handwriting isn't in one of the account's custom-handwriting seats any more (a seat was refunded "
                "or taken back). Pick another handwriting; to use it again the user buys a seat (¥19.9) or deletes another "
                "custom handwriting on inkotype.com.",
-    "label_required": "label:none needs a custom-handwriting seat (专属字迹席位) bought on inkotype.com and the AI-labelling "
-                      "agreement signed there (《AI 生成内容标识协议》). Use label visible.",
+    "label_required": "label:none needs the AI-labelling agreement (《AI 生成内容标识协议》) signed by the user on inkotype.com "
+                      "(no seat or purchase needed). Until then use label visible.",
+    "style_gone": "The handwriting of the original job is no longer available, so it can't be rewritten; generate again with "
+                  "another handwriting (paid, after a new quote).",
+    "idempotency_conflict": "That Idempotency-Key was already used for a different request; drop --idempotency-key or use a new one.",
+    "not_completed": "The job hasn't succeeded yet; wait for it before confirming delivery.",
+    "not_api_delivery": "Only jobs created through the API can be confirmed as delivered; website jobs are left alone.",
+    "account_disabled": "This Inko account is disabled; the user has to contact Inko support on the website.",
+    "invalid_model": "Model must be lyric-1 or logic-1.",
     "rate_limited": "Too many requests; wait and retry later.",
     "too_many_active": "The account already has the maximum number of running jobs; wait for them (inko.py jobs) and retry.",
     "daily_limit": "This key hit its daily spending cap; the user can raise it on the website or wait until tomorrow (Beijing time).",
@@ -299,6 +309,9 @@ def cmd_doctor(a) -> None:
                 d = acc.get("default_style") or {}
                 out["handwriting"] = {"default": d.get("label") and f"{d['label']} (ref {d['ref']}, models {', '.join(d.get('models') or []) or 'none right now'})",
                                       "favorites": len(acc.get("favorites") or [])}
+                if isinstance(acc.get("default_styles"), dict):  # what each model really uses without --style (Logic can have its own)
+                    out["handwriting"]["per_model"] = {m: (v.get("label") if v else "none: Inko's fallback")
+                                                       for m, v in acc["default_styles"].items()}
         except ApiError as e:
             out["ok"] = False
             out["key"] = f"invalid: {e.code}"
@@ -402,22 +415,32 @@ def cmd_styles(a) -> None:
 
 
 def cmd_default_style(a) -> None:
-    """The account's 常用字迹 (default handwriting): used whenever a job has no --style, on the website too."""
+    """The account's 常用字迹 (default handwriting): used whenever a job has no --style, on the website too.
+    Logic can have its own one (--model logic-1; it must be one of the account's 8 Logic handwritings); without it Logic uses
+    the general one when that one supports Logic. --clear --model X clears only that model's one; --clear alone clears both."""
+    q = f"?model={a.model}" if getattr(a, "model", None) else ""
+    which = {"logic-1": "Logic 1's own 常用字迹", "lyric-1": "the general 常用字迹"}.get(getattr(a, "model", None) or "", "the 常用字迹")
     if a.clear:
-        api("DELETE", "/styles/default")
-        emit({"ok": True, "default_style": None, "note": "Cleared. Jobs without --style now use Inko's fallback handwriting."})
+        api("DELETE", f"/styles/default{q}")
+        emit({"ok": True, "cleared": getattr(a, "model", None) or "all",
+              "note": f"Cleared {which}. Jobs without --style now use the remaining 常用字迹 if it fits the model, else Inko's fallback."})
         return
     if a.ref:
-        d = api("PUT", f"/styles/{urllib.parse.quote(str(a.ref).strip(), safe='')}/default").get("default_style") or {}
+        d = api("PUT", f"/styles/{urllib.parse.quote(str(a.ref).strip(), safe='')}/default{q}").get("default_style") or {}
         models = ", ".join(d.get("models") or []) or "no model right now"
-        emit({"ok": True, "default_style": d, "note": f"{d.get('label')} is now the account's 常用字迹 (the website uses it too); "
-              f"jobs without --style use it for: {models}."})
+        emit({"ok": True, "default_style": d, "model": getattr(a, "model", None) or "all",
+              "note": f"{d.get('label')} is now {which} (the website uses it too); it works with: {models}."})
         return
     acc = api("GET", "/account")
     if "default_style" not in acc:
         fail("not_supported", "This Inko server doesn't support 常用字迹 yet.", 1)
-    emit({"default_style": acc.get("default_style"), "favorites": acc.get("favorites"),
-          "note": "Jobs without --style use default_style when it supports the job's model (see its models)."})
+    out = {"default_style": acc.get("default_style"), "favorites": acc.get("favorites"),
+           "note": "Jobs without --style use default_style when it supports the job's model (see its models)."}
+    if isinstance(acc.get("default_styles"), dict):
+        out["default_styles"] = acc["default_styles"]
+        out["note"] = ("default_styles = what each model really uses when --style is omitted (null = Inko's fallback). "
+                       "Logic can have its own 常用字迹: `default-style CODE --model logic-1` (one of the account's 8).")
+    emit(out)
 
 
 def _download(url: str, path: Path, timeout: float = 180) -> Path:
@@ -1571,6 +1594,15 @@ def cmd_cancel(a) -> None:
     emit({"job_id": job["id"], "status": job["status"], "note": "The amount frozen for this job goes back to the balance."})
 
 
+def cmd_delivered(a) -> None:
+    """Tell Inko every file this job needs is saved locally: its copies of the result files are deleted early (otherwise kept
+    30 days). Billing and the job record stay; the website's own files are untouched. Not for jobs you may still download,
+    or whose scene.zip you haven't saved."""
+    r = api("POST", f"/generations/{a.job_id}/delivery-complete")
+    emit({"job_id": r.get("id") or a.job_id, "delivery_complete": bool(r.get("delivery_complete")), "files_expire_at": r.get("files_expire_at"),
+          "note": "Inko's copies of the result files are removed shortly; keep the local files (download links stop working)."})
+
+
 # ── argparse ────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -1596,7 +1628,8 @@ def main() -> None:
     s.add_argument("--limit", type=int, default=20)
     s = sp.add_parser("default-style", help="show / set / clear the account's 常用字迹 (used when --style is omitted)")
     s.add_argument("ref", nargs="?", help="preset code (e.g. 12) or custom style id to make the 常用字迹; omit to show it")
-    s.add_argument("--clear", action="store_true", help="remove the 常用字迹")
+    s.add_argument("--clear", action="store_true", help="remove the 常用字迹 (with --model: only that model's one)")
+    s.add_argument("--model", choices=["lyric-1", "logic-1"], help="logic-1 = Logic's own 常用字迹 (one of the account's 8); lyric-1 = the general one")
     s = sp.add_parser("previews")
     s.add_argument("codes", nargs="+", help="style ids/codes, e.g. 12 37")
     s.add_argument("--model", choices=["lyric-1", "logic-1"])
@@ -1628,7 +1661,7 @@ def main() -> None:
     s.add_argument("--layout", help="layout JSON for custom placement (text comes from layout.text)")
     s.add_argument("--paper", default="white", choices=["white", "cream", "grid"], help="background for plain generation")
     s.add_argument("--label", default="visible", choices=["visible", "none"],
-                   help="none = no visible AI label: only for accounts that bought a custom-handwriting seat and signed the "
+                   help="none = no visible AI label: only after the user signed the "
                         "AI-labelling agreement on inkotype.com (else 403 label_required)")
     s.add_argument("--seed", type=int)
     s.add_argument("--pen-type", choices=["original", "gel", "ballpoint", "fountain", "pencil"])
@@ -1664,6 +1697,8 @@ def main() -> None:
     s.add_argument("--interval", type=float, default=3)
     s = sp.add_parser("cancel")
     s.add_argument("job_id")
+    s = sp.add_parser("delivered", help="all wanted files are saved locally: let Inko delete its copies early")
+    s.add_argument("job_id")
 
     a = p.parse_args()
     if sys.platform == "win32":                                  # Chinese output on Windows consoles
@@ -1674,7 +1709,7 @@ def main() -> None:
                 pass
     {"doctor": cmd_doctor, "auth": cmd_auth, "account": cmd_account, "models": cmd_models, "styles": cmd_styles,
      "default-style": cmd_default_style, "previews": cmd_previews, "quote": cmd_quote, "layout": cmd_layout, "generate": cmd_generate, "wait": cmd_wait,
-     "download": cmd_download, "jobs": cmd_jobs, "rewrite": cmd_rewrite, "cancel": cmd_cancel}[a.cmd](a)
+     "download": cmd_download, "jobs": cmd_jobs, "rewrite": cmd_rewrite, "cancel": cmd_cancel, "delivered": cmd_delivered}[a.cmd](a)
 
 
 if __name__ == "__main__":
