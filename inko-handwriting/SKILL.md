@@ -17,9 +17,15 @@ not a simulated camera: no perspective, desk scenes, shadows, page curl, scanner
 All scripts are in `scripts/` next to this file (call them with the path you installed to, e.g.
 `python .claude/skills/inko-handwriting/scripts/inko.py …`). They print JSON on stdout — read it, don't guess.
 
-For Logic math, read `references/writing-math.md` §5 before preparing formulas. In the 2026-09-28 update,
-`\eta` writes n (not η), `\wedge` / `\vee` are supported, and the old experimental arrows / `\oplus` / `\odot` /
-formula `\#` / `\%` are blocked. Use live `models --symbols` and a free quote rather than an older cached list.
+What the models can write changes as they learn: this skill never lists it. Get it live — `inko.py charset` (plain
+text: Greek, pinyin tones, superscripts, `½`, `⑪`, `「」` … per model, and what custom handwritings can't write) and
+`inko.py models --symbols` (LaTeX commands inside `$…$`) — and let the free quote have the last word. For Logic math,
+read `references/writing-math.md` §5 before preparing formulas. When either command reports `skill_update`, tell the
+user once that a newer version of this skill is available (`python install.py` from the latest release).
+
+What changed in skill 1.5.0 (2026-10-06): the lists of writable characters and LaTeX commands moved out of these files
+into the live `inko.py charset` / `models --symbols`, so the skill stays right as the models learn (Greek letters,
+pinyin tones, superscripts, `½`, `⑪`, `「」` … were added on 2026-10-06).
 
 What changed on 2026-10-04 (skill 1.4.0): both models were retrained on English handwriting (word spacing, capitals,
 baseline); the layout engine breaks a formula wider than a whole line at `=`, `≤`, `+` … instead of shrinking it;
@@ -118,7 +124,8 @@ spending permission. A website adapter's provided tools and layout rules take pr
 | Chinese / English prose, letters, essays, notes without formulas | `lyric-1` | Hundreds of preset handwritings (+ the user's own custom handwriting). No `$…$`. |
 | Anything with math: `$…$` formulas, Chinese mixed in | `logic-1` | Each account gets 8 curated handwritings. Only the symbols in `references/writing-math.md` §5 — unknown LaTeX commands are refused. |
 
-Formulas decide it: one `$x^2$` means `logic-1`. Chemistry like H₂O can be plain text in either model (write `H2O`).
+Formulas decide it: one `$x^2$` means `logic-1`. Chemistry like H₂O can be plain text in either model (whether the
+subscript ₂ is written as-is or as `H2O`: see `inko.py charset`).
 Answers that are only numbers ("只写最终答案": `x=4`, `-3`, `40`) need no formulas and can stay with `lyric-1`.
 Without `--model`, `inko.py` picks this way automatically and says so in its output.
 
@@ -174,9 +181,9 @@ and never treat your recommendation as their answer. Typical:
   (portrait, white, no lines); an uploaded page to write on is one too.
 - **Pen**: original / gel 中性笔 / ballpoint 圆珠笔 / fountain 钢笔 / pencil 铅笔; black / blue / blue-black; thinner–bolder.
 - **Output**: standard flat PNG pages / PDF / both.
-- **Characters the models can't write** (traditional characters, tone-marked pinyin, superscript digits, `½`, `Ⅱ` …,
-  see `references/writing-text.md`): ask once whether to use the writable equivalent, with your recommendation first
-  and one or two real examples from their text (`pàng⁴ → pang4`, `「」 → “”`). If they already said how, or told you
+- **Characters the models can't write** (the live list: `inko.py charset`; the quote flags each one): ask once whether
+  to use the writable equivalent the list suggests, with your recommendation first and one or two real examples from
+  their text. If they already said how, or told you
   not to ask about such things, just apply the recommended form and mention it.
 - **Price** (always, before submitting).
 

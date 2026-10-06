@@ -41,8 +41,8 @@ A handwritten solution that looks real is shaped like the student's thinking, no
 | 只写答案 | "只写最终答案" | the results only, numbered like the source: no question, working, checks or 解 / 答 prefixes; plain numbers can use lyric-1 |
 
 For proofs: 证明：∵ … ∴ … 得证 / 证毕. For geometry: name the figure in words (在 △ABC 中), cite reasons in
-parentheses after the step: `∴ $AB=AC$（等角对等边）`. `∠` can't be written — angles in words:
-`角 1 = 角 2（对顶角相等）` (§6). Degrees with logic-1: just type `60°` (see §6).
+parentheses after the step: `∴ $AB=AC$（等角对等边）`. Angles: `∠` if `inko.py charset` lists it as writable, otherwise
+in words, `角 1 = 角 2（对顶角相等）` (§6). Degrees: type `60°` where the live list allows `°` (see §6).
 
 ## 3. Chinese school conventions
 
@@ -108,64 +108,33 @@ parentheses after the step: `∴ $AB=AC$（等角对等边）`. `∠` can't be w
 
 ## 5. What Logic can write inside `$…$`
 
-Logic's symbol support as of 2026-09-28, in LaTeX commands. `python scripts/inko.py models --symbols` prints the live
-lists (`logic-1` → `symbols`), also as LaTeX commands and single characters (`\alpha`, `\frac`, `\sin`, `+`, `A`):
-`stable` = writable (the substituted glyphs and the structures `\frac \sqrt \bar \overline \mathbb` included), `beta` =
-experimental (currently empty), `substituted` = drawn with a real person's glyph, `unsupported` = refused,
-`rewrites` = explicit notation changes (`\eta` → `n`), `environments` = the
-`\begin{…}` names that work. Always run the free quote — its `errors` name every symbol it refuses (with paragraph
-and snippet), its `warnings` the weaker ones. It is the source of truth: where it disagrees with this section, follow
-the quote.
+Which LaTeX commands Logic writes changes whenever the model is retrained, so the lists are **not** copied here.
+`python scripts/inko.py models --symbols` prints them live (`logic-1` → `symbols`), as LaTeX commands and single
+characters (`\alpha`, `\frac`, `\sin`, `+`, `A`):
 
-**Unknown commands are refused.** Logic knows only the commands listed here. Anything else — `\geqslant`, `\because`,
-`\binom`, `\overrightarrow`, `\lg`, `\implies`, `\mathcal`, the `&` of an `align` environment — is refused by the quote
-(`unsupported_symbol` in `errors`) and by `generate` (`invalid_text`); without that check the whole formula would
-silently vanish from the page. Replace it (§6) before paying.
+- `stable` — writable, including the structures `\frac \sqrt \bar \overline \mathbb`. Of these, `substituted` are drawn
+  with a real person's glyph, sized, placed and weighted like the chosen hand (each handwriting always gets the same
+  one): fine to use, but the shape isn't the writer's own and may look slightly different from the rest of the formula.
+  The rest are written by the model in the chosen hand — use them freely.
+- `beta` — experimental: may come out wrong; look at them in the result (free rewrite if needed).
+- `unsupported` — refused by the quote (`unsupported_symbol`). Substitutions in §6.
+- `rewrites` — deliberate notation changes, e.g. `\eta` → `n`: the command is accepted but written as the other symbol.
+  Make this visible when preparing content; if the distinction matters (a formula already using n), settle the
+  notation with the user before submitting.
+- `environments` — the `\begin{…}` names that work.
 
-**Verified in the 2026-09-28 production-setting tests:** 203 supported table entries (137 model-written / rewritten,
-59 substituted, 7 fallback), 54 unsupported. Entries include command aliases, not 203 distinct glyph shapes.
+<!-- inko:live:logic-symbols -->
+Run `python scripts/inko.py models --symbols` and read `logic-1` → `symbols` before writing formulas.
+<!-- /inko:live -->
 
-**Written by the model, in the chosen hand** — use freely:
-- Digits, all lowercase latin letters, uppercase **A B C E F G H I L M N P R S T V X Y**
-- `+ - = < > \lt \gt \times \div \pm \neq \ne \leq \le \geq \ge \in \to \rightarrow \infty \wedge \vee`
-- `( ) [ ] | / , . ; ! '`, `\prime`, `\mid \vert` (a `|`), `\parallel` (written as `||`)
-- Greek: `\alpha \beta \gamma \theta \mu \pi \sigma \phi \Delta`
-- `\sum \int`; `\iint \iiint` are written as two / three ∫
-- `\ldots \cdots \dots`; `\cdot` is drawn as a dot at mid height
-- Functions: `\sin \cos \tan \log \lim` (also `\log_a`) as whole words; `\ln \exp \det \max \min \sec \csc \cot \arcsin
-  \arccos \arctan \sinh \cosh \tanh` letter by letter, the way students write them (they look like ordinary letters)
-- `\ell` is written as l, `\dx` as d x
-- **`\eta` is accepted but deliberately written as Latin n, not η.** Make this visible when preparing content; if
-  the distinction matters (especially a formula already using n), resolve the notation before submitting. Raw `η`
-  is not equivalent input: use the `\eta` command for this rewrite.
+Always run the free quote — its `errors` name every symbol it refuses (with paragraph and snippet), its `warnings` the
+weaker ones. It is the source of truth: where it disagrees with anything here, follow the quote.
 
-**Substituted glyph** — fine to use, but the shape isn't the writer's own. Tests show the model alone cannot reliably
-write these, so Inko draws them with a real person's handwritten glyph, sized, placed and weighted like the chosen hand (each
-handwriting always gets the same one); they may look slightly different from the rest of the formula.
-- Uppercase **D J K O Q U W Z**; `:`, `\colon`, `*`
-- Greek: `\delta \epsilon \varepsilon \varphi \nu \xi \rho \tau \omega \Gamma \Theta \Lambda \Sigma \Phi \Psi \Omega`
-- Sets and logic: `\cap \cup \subset \subseteq \supset \emptyset \notin \neg \setminus \backslash`
-- Relations and arrows: `\approx \equiv \sim \propto \ll \perp \Rightarrow \Leftrightarrow \iff \mapsto \mp`
-- Others: `\partial \nabla \prod \oint \circ \hbar`; `\mathbb{R} \mathbb{N} \mathbb{Z} \mathbb{Q} \mathbb{C}` (other
-  `\mathbb` letters come out as plain letters)
-- A lone point or circle name (`圆 O`, `点 D`) as a plain-text letter outside `$…$` stays in the writer's own hand.
-
-**Model first, substituted glyph if its attempt fails**: `\{ \}` (`\lbrace \rbrace`), `\lambda`, `\forall`,
-`\exists` — few training samples; look at them in the result.
-
-**No symbols remain in the old experimental list.** The production-setting tests promoted `\wedge \vee` to
-supported and moved `\# \% \uparrow \downarrow \leftarrow \oplus \odot` to unsupported.
-Warnings can still apply to untested structures (wide / nested / inline matrices) and Chinese inside formulas.
-Plain-text `50%` outside `$…$` is unaffected.
-
-**Not supported** — tests show incorrect glyphs or strokes, or the parser cannot map the command. Never use them; the quote refuses them
-(`unsupported_symbol`). Substitutions in §6.
-- Greek: `\zeta \kappa \chi \psi \iota \upsilon \vartheta \varrho \varsigma \varpi \Pi \Xi \Upsilon`
-- `\otimes \ominus \oplus \odot \bigoplus \bigcap \bigcup \bigvee \bigwedge \cong \simeq \triangleq \gg \ni \supseteq \subsetneq
-  \models \vdash \Vdash \top`
-- Arrows: `\uparrow \downarrow \leftarrow \leftrightarrow \longrightarrow \hookrightarrow \rightleftharpoons`
-- `\lfloor \rfloor \lceil \rceil`, `\angle \aleph \dagger \bullet \# \%`
-- Accents: `\hat \tilde \vec \dot` (`\bar` and `\overline` work)
+**Unknown commands are refused.** Logic knows only the commands in the live lists. Anything else (an unknown command, or
+the `&` of an `align` environment) is refused by the quote (`unsupported_symbol` in `errors`) and by `generate`
+(`invalid_text`); without that check the whole formula would silently vanish from the page. Replace it (§6) before
+paying. Functions not in the list are written letter by letter as `\operatorname{…}`; a lone point or circle name
+(`圆 O`, `点 D`) as a plain-text letter outside `$…$` stays in the writer's own hand.
 
 **Structures**
 - `\frac \dfrac \tfrac` (nested, in exponents too), `\sqrt{…}`, `\sqrt[3]{…}`, `^`, `_` (`x_i^2` too)
@@ -189,15 +158,15 @@ $A^{-1}=\begin{pmatrix}1&-2\\0&1\end{pmatrix}$
 (In JSON every backslash doubles, the row break included: `"\\begin{cases}x=2\\\\y=1\\end{cases}"`.) A matrix or
 `cases` block is several rows tall, like stacked fractions (§4): look at it in the preview and in the result.
 
-Outside `$…$` (plain text) both models write Chinese, English, digits, full/half-width punctuation and the symbols of
-the Chinese handwriting set, e.g. `∵ ∴ △ ⊥ ∥ ≈ ≠ ≥ ≤ × ÷ ± √ ∞ ∈ ∪ ∩ ≡ → ℃ % ‰ ①②③ ……`. Greek letters and
-`⊂ ⊆ ∅ ∀ ∃ ⇒` belong inside `$…$`: substituted glyphs and fallbacks are only used in formulas. Not writable anywhere:
-`∠` (write 角), `² ³` (superscript digits), `½`, `Ⅰ Ⅱ Ⅲ`, `⑴`, `㈠`, `「」`. The degree sign `°` in plain text works with
-logic-1 only (`角 AOC = 60°`: written as the writer's own small raised o, right next to the number); lyric-1 can't.
+Outside `$…$` (plain text) the characters each model writes — Greek letters, `°`, superscripts, `∵ ∴ △ ≈ ℃ ①` … —
+are in the live `inko.py charset` (`references/writing-text.md`). Prefer `$…$` for Greek letters and math symbols in
+logic-1: substituted glyphs and fallbacks are only used in formulas.
 
 ## 6. Substitutions
 
-For everything the quote refuses and everything §5 marks unsupported or doesn't list. Keep the meaning: when the only
+For everything the quote refuses and everything the live lists (§5, `inko.py charset`) mark unsupported or don't list.
+A symbol the live lists say is writable needs no substitution, even if it appears below — the models keep learning and
+this table only says what to do *if* something is refused. Keep the meaning: when the only
 substitute is a different letter or notation the user might not accept, ask first (a teacher's variable names matter).
 
 Same sign, another command — use the one Logic knows:
@@ -212,9 +181,9 @@ Same sign, another command — use the one Logic knows:
 
 | Wanted | Write instead |
 |---|---|
-| `90°`, `^\circ`, `\degree` | logic-1: `90°` as plain text is fine (written as `$90^{o}$`: a small raised o in the writer's own hand, exactly like a handwritten degree sign); with lyric-1 `90 度`; `^\circ` works too, with a substituted glyph |
+| `90°`, `^\circ`, `\degree` | plain-text `90°` where `inko.py charset` lists `°` for the model (logic-1 writes it as `$90^{o}$`: a small raised o in the writer's own hand); otherwise `90 度`; `^\circ` works too, with a substituted glyph |
 | `\because`, `\therefore` | text `∵` / `∴` outside `$…$` (preferred in proofs and derivations), or 因为 / 所以 |
-| `\angle ABC`, `∠1` | 角 in words: `角 ABC`, `角 1 = 角 2` — `∠` can't be written, not even as plain text |
+| `\angle ABC`, `∠1` | while `inko.py charset` lists `∠` as not writable: 角 in words, `角 ABC`, `角 1 = 角 2` |
 | `\triangle ABC` | text `△ABC`, or `$\Delta ABC$` |
 | `\cong` (全等) | 全等 in words: `△ABC 全等于 △DEF` |
 | `\simeq`, `\triangleq` | `=` with 记作 / 定义为 in words |
@@ -233,7 +202,7 @@ Same sign, another command — use the one Logic knows:
 | `\tilde{x}` | another name agreed with the user, or words |
 | `\eta \zeta \kappa \chi \psi \iota \upsilon \Pi \Xi \Upsilon` | another letter only if the user agrees; otherwise name the quantity: `机械效率为 80%` instead of `$\eta=80\%$` |
 | `\hookrightarrow`, `\rightleftharpoons`, `\models`, `\vdash`, `\Vdash`, `\aleph`, `\bigvee`, `\bigwedge` | words |
-| `\%` | text `%` outside math (`50%`); `\%` is experimental |
+| `\%` | text `%` outside math (`50%`); inside math only if the live lists have `\%` |
 | `\binom{n}{k}` | `$C_n^k$` |
 | Chinese inside `\text{}` | move the Chinese outside the `$…$` |
 | `align`, `aligned`, `gather` | write each line as its own line (`&` outside a matrix isn't supported); matrices and `cases` work (§5) |

@@ -20,24 +20,25 @@ typeset structure, markdown leftovers, odd punctuation. Clean the text first.
 
 ## Punctuation
 
-- Chinese text: full-width `，。、；：？！“”‘’（）《》……——`. `「」` are not writable → use `“”` (see below).
+- Chinese text: full-width `，。、；：？！“”‘’（）《》……——`. For anything rarer (`「」`, `【】`, `°` …) check the live
+  list below.
 - Math solutions and derivations are the exception: no full stops at all (`。．.`), commas at most, nothing at line
   ends (`writing-math.md` §1). Letters, essays and diaries keep their `。`.
 - English text: ASCII punctuation; straight or curly quotes both work.
-- Numbers and units: `3.5 kg`, `25℃` (℃ works; `°` works with logic-1 only — with lyric-1 write `25 度`), `50%` works.
+- Numbers and units: `3.5 kg`, `25℃`, `50%`. Whether `°`, `m²`, `½` … can be written depends on the model — see below.
 
 ## What can be written
 
 Both models write common simplified Chinese characters, ASCII letters and digits, and the usual Chinese and English
-punctuation; `①②③`, `℃` and `←↑→↓` work too. They **can't** write:
+punctuation. Which rarer characters each model writes (Greek letters, tone-marked pinyin, superscripts, `½`, Roman
+numerals, `⑪`, `「」`, `°`, `∠` …) changes as the models learn more, so it is **not** copied into this file:
 
-| Not writable | Write instead |
-|---|---|
-| traditional / most dialect characters (`個 國 係 廣 東 佢`) | simplified (`个 国 系 广 东`); dialect words the user must decide |
-| letters with tone marks or accents (`ā á ǎ à ü ö ä ë ï`) | ASCII + tone digit: `pàng⁴ jäu⁵ → pang4 jau5`, `nǚ → nv3`, `café → cafe` |
-| superscript / subscript digits (`¹ ² ³ ⁴ ₁ ₂`) | ordinary digits (`m2`, tone `4`), or `$m^2$` / `$x_1$` with logic-1 |
-| `½ ¾`, Roman numerals `Ⅰ Ⅱ Ⅲ`, `「」 『』` | `1/2`, `I II` or `一、二、`, `“” ‘’` |
-| `°` with lyric-1 | `25 度` (logic-1 writes `60°` directly) |
+<!-- inko:live:plain-charset -->
+Run `python scripts/inko.py charset` (no API key needed) before preparing text with anything beyond Chinese, ASCII and
+common punctuation. It prints, from the live server: what lyric-1 and logic-1 can and can't write in plain text (by
+group), what custom handwritings can't write on top of that, and the writable equivalent to suggest for each group
+that can't be written. Trust it over anything you remember.
+<!-- /inko:live -->
 
 The free quote is the authority: it lists every character it can't write (`unsupported_char` / `unsupported_symbol`,
 with paragraph and snippet), and anything it doesn't flag is writable. Nothing is dropped or replaced silently — and you

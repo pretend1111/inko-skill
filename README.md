@@ -2,6 +2,13 @@
 
 **[简体中文 → README.zh-CN.md](README.zh-CN.md)**
 
+**1.5.0 (2026-10-06): the skill stops copying what the models can write.** Which rarer characters each model writes in
+plain text (Greek letters, pinyin tones, superscripts, `½`, Roman numerals, `⑪`, `「」`, `°` …) and which LaTeX commands
+Logic writes now come live from the server — `inko.py charset` (new) and `inko.py models --symbols` — so the skill stays
+right as the models learn; the website's assistant fills the same places from the same source. `doctor`, `models` and
+`charset` say when a newer skill is available. On the same day the models learned 33 Greek letters, pinyin tones,
+superscripts / subscripts, `½`, Roman numerals, `⑪`–`⑳` and more.
+
 **1.4.0 (2026-10-05): caught up with the website's assistant.** English handwriting retrained; long formulas wrap at
 `=` / `+` instead of shrinking, and generated formulas match the text size; Logic can have its own 常用字迹
 (`default-style CODE --model logic-1`); a table of what the models can't write and how the agent asks about it; math jobs

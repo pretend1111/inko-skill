@@ -48,7 +48,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 DEFAULT_BASE = "https://api.inkotype.com/v1"
 UA = f"inko-skill/{VERSION} (+https://inkotype.com/developers)"
 TERMINAL = ("succeeded", "failed", "canceled")
@@ -290,6 +290,9 @@ def cmd_doctor(a) -> None:
         m = call("GET", "/models", auth=False, retries=1)
         out["api_reachable"] = True
         out["pricing"] = m.get("pricing")
+        upd = _skill_update(m.get("skill_latest", ""))
+        if upd:
+            out["skill_update"] = upd
     except ApiError as e:
         out["ok"] = False
         out["api_reachable"] = False
@@ -353,12 +356,37 @@ def cmd_account(a) -> None:
     emit(api("GET", "/account"))
 
 
+def _vtuple(v: str) -> tuple:
+    return tuple(int(x) for x in re.findall(r"\d+", v or "")[:3])
+
+
+def _skill_update(latest: str) -> str | None:
+    """The server knows the newest released skill; say so when this copy is older (the agent tells the user once)."""
+    if latest and _vtuple(latest) > _vtuple(VERSION):
+        return (f"skill {latest} is available (this is {VERSION}): download the latest release from "
+                "https://github.com/pretend1111/inko-skill and run `python install.py` again")
+    return None
+
+
 def cmd_models(a) -> None:
     m = api("GET", "/models", auth=False)
     if not a.symbols:
         for d in m.get("data", []):
             d.pop("symbols", None)
+    upd = _skill_update(m.get("skill_latest", ""))
+    if upd:
+        m["skill_update"] = upd
     emit(m)
+
+
+def cmd_charset(a) -> None:
+    """Live list of which rarer plain-text characters each model writes (Greek, pinyin tones, superscripts, ½, ⑪, 「」, ° …).
+    It follows the models as they learn, so the skill never hard-codes it."""
+    d = api("GET", "/charset", auth=False)
+    upd = _skill_update(d.get("skill_latest", ""))
+    if upd:
+        d["skill_update"] = upd
+    emit(d)
 
 
 def _parse_where(expr: str) -> list[tuple[str, str, float]]:
@@ -1618,6 +1646,7 @@ def main() -> None:
     sp.add_parser("account")
     s = sp.add_parser("models")
     s.add_argument("--symbols", action="store_true", help="include Logic's stable/beta math symbol lists")
+    sp.add_parser("charset", help="live list of the rarer plain-text characters each model can / can't write")
     s = sp.add_parser("styles")
     s.add_argument("--model", choices=["lyric-1", "logic-1"])
     s.add_argument("--where", default="", help='facet filters, e.g. "neat>=60 beauty>=50 joined<=40"')
@@ -1707,7 +1736,7 @@ def main() -> None:
                 st.reconfigure(encoding="utf-8")
             except Exception:  # noqa: BLE001
                 pass
-    {"doctor": cmd_doctor, "auth": cmd_auth, "account": cmd_account, "models": cmd_models, "styles": cmd_styles,
+    {"doctor": cmd_doctor, "auth": cmd_auth, "account": cmd_account, "models": cmd_models, "charset": cmd_charset, "styles": cmd_styles,
      "default-style": cmd_default_style, "previews": cmd_previews, "quote": cmd_quote, "layout": cmd_layout, "generate": cmd_generate, "wait": cmd_wait,
      "download": cmd_download, "jobs": cmd_jobs, "rewrite": cmd_rewrite, "cancel": cmd_cancel, "delivered": cmd_delivered}[a.cmd](a)
 
