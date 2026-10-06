@@ -363,8 +363,8 @@ def _vtuple(v: str) -> tuple:
 def _skill_update(latest: str) -> str | None:
     """The server knows the newest released skill; say so when this copy is older (the agent tells the user once)."""
     if latest and _vtuple(latest) > _vtuple(VERSION):
-        return (f"skill {latest} is available (this is {VERSION}): download the latest release from "
-                "https://github.com/pretend1111/inko-skill and run `python install.py` again")
+        return (f"skill {latest} is available (this is {VERSION}): `git pull` in the inko-skill clone (or "
+                "`git clone --depth 1 https://github.com/pretend1111/inko-skill.git`) and run `python install.py` again")
     return None
 
 

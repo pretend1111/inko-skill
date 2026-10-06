@@ -21,7 +21,7 @@ What the models can write changes as they learn: this skill never lists it. Get 
 text: Greek, pinyin tones, superscripts, `½`, `⑪`, `「」` … per model, and what custom handwritings can't write) and
 `inko.py models --symbols` (LaTeX commands inside `$…$`) — and let the free quote have the last word. For Logic math,
 read `references/writing-math.md` §5 before preparing formulas. When either command reports `skill_update`, tell the
-user once that a newer version of this skill is available (`python install.py` from the latest release).
+user once that a newer version of this skill is available (`git pull` the inko-skill clone, then `python install.py`).
 
 What changed in skill 1.5.0 (2026-10-06): the lists of writable characters and LaTeX commands moved out of these files
 into the live `inko.py charset` / `models --symbols`, so the skill stays right as the models learn (Greek letters,
