@@ -206,8 +206,7 @@ Same sign, another command — use the one Logic knows:
 | `\binom{n}{k}` | `$C_n^k$` |
 | Chinese inside `\text{}` | move the Chinese outside the `$…$` |
 | `align`, `aligned`, `gather` | write each line as its own line (`&` outside a matrix isn't supported); matrices and `cases` work (§5) |
-| `x²`, `m/s²` (unicode superscripts) | `$x^2$`, `$m/s^2$` |
-| chemistry `H₂O`, `CO₂` | logic-1: `$H_2O$`, `$CO_2$` (the O is a substituted glyph); lyric-1: plain text `H2O`, `CO2` |
+| `x²`, `m/s²`, `H₂O`, `CO₂` (unicode super- / subscripts) | keep them as typed in plain text when `inko.py charset` lists them for the model (both models write them now); only if it doesn't: `x2`, `H2O` with lyric-1, `$x^2$`, `$H_2O$` with logic-1. Inside a formula always use `^` / `_` |
 
 ## 7. LaTeX pitfalls
 

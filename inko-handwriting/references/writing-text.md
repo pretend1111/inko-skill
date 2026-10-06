@@ -20,18 +20,17 @@ typeset structure, markdown leftovers, odd punctuation. Clean the text first.
 
 ## Punctuation
 
-- Chinese text: full-width `，。、；：？！“”‘’（）《》……——`. For anything rarer (`「」`, `【】`, `°` …) check the live
-  list below.
+- Chinese text: full-width `，。、；：？！“”‘’（）《》……——`. Rarer marks: see the live list below.
 - Math solutions and derivations are the exception: no full stops at all (`。．.`), commas at most, nothing at line
   ends (`writing-math.md` §1). Letters, essays and diaries keep their `。`.
 - English text: ASCII punctuation; straight or curly quotes both work.
-- Numbers and units: `3.5 kg`, `25℃`, `50%`. Whether `°`, `m²`, `½` … can be written depends on the model — see below.
+- Numbers and units: `3.5 kg`, `25℃`, `50%`. Rarer signs: see the live list below.
 
 ## What can be written
 
 Both models write common simplified Chinese characters, ASCII letters and digits, and the usual Chinese and English
-punctuation. Which rarer characters each model writes (Greek letters, tone-marked pinyin, superscripts, `½`, Roman
-numerals, `⑪`, `「」`, `°`, `∠` …) changes as the models learn more, so it is **not** copied into this file:
+punctuation. Which rarer characters each model writes changes as the models learn more, so it is **not** copied into
+this file:
 
 <!-- inko:live:plain-charset -->
 Run `python scripts/inko.py charset` (no API key needed) before preparing text with anything beyond Chinese, ASCII and
@@ -40,11 +39,13 @@ group), what custom handwritings can't write on top of that, and the writable eq
 that can't be written. Trust it over anything you remember.
 <!-- /inko:live -->
 
-The free quote is the authority: it lists every character it can't write (`unsupported_char` / `unsupported_symbol`,
-with paragraph and snippet), and anything it doesn't flag is writable. Nothing is dropped or replaced silently — and you
-shouldn't either. When the content (a text to copy, an answer that repeats the question's notation) contains such
-characters, ask the user **once** whether to use the writable equivalent, recommendation first, with one or two real
-examples from their text. If they already said how ("用数字标调", "改成简体") or told you not to ask about such things,
+Write every character the live list marks as writable for the chosen model exactly as typed — Greek letters,
+superscripts, `√` and the like included — without asking and without rewriting. The free quote is the authority: it
+lists every character it can't write (`unsupported_char` / `unsupported_symbol`, with paragraph and snippet), and
+anything it doesn't flag is writable. Nothing is dropped or replaced silently — and you shouldn't either. Only when the
+content (a text to copy, an answer that repeats the question's notation) contains characters the live list marks as
+**not** writable for that model, or that the quote flags — and only about those characters — ask the user **once**
+whether to use the writable equivalent, recommendation first, with one or two real examples from their text. If they already said how ("用数字标调", "改成简体") or told you not to ask about such things,
 apply the recommended form directly and mention it in one line.
 
 ## Forms that people recognise
