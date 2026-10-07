@@ -193,8 +193,6 @@ Same sign, another command — use the one Logic knows:
 | `\leftrightarrow`, `\longrightarrow` | `\Leftrightarrow` / `\iff` when it means 等价, `\rightarrow` for a plain arrow; else words (对应) |
 | `\bigcup_{i=1}^{n} A_i`, `\bigcap` | `A_1 \cup A_2 \cup \cdots \cup A_n` (∩ likewise) |
 | `\otimes`, `\ominus`, `\bigoplus` | `\times` when the meaning allows (an ordinary product), else words |
-| `\lfloor x \rfloor` | `[x]`, as Chinese textbooks write 取整, with the meaning said once: `[x] 表示不超过 x 的最大整数` |
-| `\lceil x \rceil` | words: `不小于 x 的最小整数` |
 | `A^\top`, `A^\dagger` | `A^T`; `\dagger` in words (共轭转置), or `A^{*}` if the user's course writes it so |
 | `\hat{y}` | words (`y 的估计值`, `回归方程为 $y=…$`) — not `\bar{y}` in statistics, where ȳ is the mean; elsewhere `\bar` only if the user agrees |
 | `\vec{a}`, `\overrightarrow{AB}` | 向量 $a$ / 向量 $AB$ in words (arrows over letters aren't supported; `\mathbf{a}` writes a plain a) |
