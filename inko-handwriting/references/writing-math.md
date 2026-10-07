@@ -140,7 +140,8 @@ paying. Functions not in the list are written letter by letter as `\operatorname
 - `\frac \dfrac \tfrac` (nested, in exponents too), `\sqrt{…}`, `\sqrt[3]{…}`, `^`, `_` (`x_i^2` too)
 - Limits: `\sum_{i=1}^{n}`, `\int_a^b`, `\prod_{k=1}^{n}`, `\lim_{x \to 0}`; `\limits` / `\nolimits` are accepted
   and change nothing (`\sum\limits_{i=1}^{n}` is written like `\sum_{i=1}^{n}`)
-- `\bar{x}`, `\overline{AB}`: a short bar above
+- `\bar{x}`, `\overline{AB}`: a short bar above; `\vec{a}`, `\overrightarrow{AB}`: an arrow above; `\dot{x}`, `\ddot{x}`:
+  one / two dots above (where the live lists have them)
 - `\left( \right)` and the like: written as ordinary brackets; `\left.` / `\right.` draw nothing
 - Matrices: `matrix pmatrix bmatrix vmatrix Bmatrix smallmatrix`, and `array{lcr}` (columns aligned as given, vertical
   rules not drawn); the brackets are stretched, `\cdots \vdots \ddots` inside are laid out as three dots. Tested up to
@@ -171,8 +172,7 @@ substitute is a different letter or notation the user might not accept, ask firs
 
 Same sign, another command — use the one Logic knows:
 - `\geqslant \leqslant` (common in Chinese LaTeX) → `\geq \leq`
-- `\implies` → `\Rightarrow`; `\varnothing` → `\emptyset`; `\ast` → `*`; `\bot` → `\perp`; `\lnot` → `\neg`;
-  `\bullet` (as a product) → `\cdot`
+- `\implies` → `\Rightarrow`; `\varnothing` → `\emptyset`; `\ast` → `*`; `\bot` → `\perp`; `\lnot` → `\neg`
 - `\lvert x \rvert` → `|x|`; `\|x\|`, `\Vert x \Vert` → `||x||`; `\langle a, b \rangle` → `<a, b>`
 - `\vartheta \varrho \varsigma \varpi` → `\theta \rho \sigma \pi` (same letter, other shape)
 - `\lg x`, `\gcd`, `\deg`, `\dim`, `\ker`, `\arg`, `\sup`, `\inf`, any function name not in §5 → `\mathrm{lg}\,x`,
@@ -187,19 +187,15 @@ Same sign, another command — use the one Logic knows:
 | `\triangle ABC` | text `△ABC`, or `$\Delta ABC$` |
 | `\cong` (全等) | 全等 in words: `△ABC 全等于 △DEF` |
 | `\simeq`, `\triangleq` | `=` with 记作 / 定义为 in words |
-| `\gg` | turn it round, `\ll` works: `$b \ll a$` for a ≫ b; or 远大于 in words |
 | `\supseteq`, `\ni` | turn it round: `$B \subseteq A$`, `$x \in A$` |
 | `\subsetneq` (真子集) | in words: `$A$ 是 $B$ 的真子集`; `\subset` only if the user's course writes proper subsets as ⊂ |
-| `\leftrightarrow`, `\longrightarrow` | `\Leftrightarrow` / `\iff` when it means 等价, `\rightarrow` for a plain arrow; else words (对应) |
-| `\bigcup_{i=1}^{n} A_i`, `\bigcap` | `A_1 \cup A_2 \cup \cdots \cup A_n` (∩ likewise) |
+| `\leftrightarrow` | `\Leftrightarrow` / `\iff` when it means 等价, `\rightarrow` for a plain arrow; else words (对应) |
 | `\otimes`, `\ominus`, `\bigoplus` | `\times` when the meaning allows (an ordinary product), else words |
-| `A^\top`, `A^\dagger` | `A^T`; `\dagger` in words (共轭转置), or `A^{*}` if the user's course writes it so |
+| `A^\dagger` | `\dagger` in words (共轭转置), or `A^{*}` if the user's course writes it so |
 | `\hat{y}` | words (`y 的估计值`, `回归方程为 $y=…$`) — not `\bar{y}` in statistics, where ȳ is the mean; elsewhere `\bar` only if the user agrees |
-| `\vec{a}`, `\overrightarrow{AB}` | 向量 $a$ / 向量 $AB$ in words (arrows over letters aren't supported; `\mathbf{a}` writes a plain a) |
-| `\dot{x}`, `\ddot{x}` (time derivatives) | `x'`, `x''`, or `\frac{dx}{dt}` |
 | `\tilde{x}` | another name agreed with the user, or words |
 | `\eta \zeta \kappa \chi \psi \iota \upsilon \Pi \Xi \Upsilon` | another letter only if the user agrees; otherwise name the quantity: `机械效率为 80%` instead of `$\eta=80\%$` |
-| `\hookrightarrow`, `\rightleftharpoons`, `\models`, `\vdash`, `\Vdash`, `\aleph`, `\bigvee`, `\bigwedge` | words |
+| `\hookrightarrow`, `\rightleftharpoons`, `\models`, `\vdash`, `\Vdash`, `\aleph`, `\bigwedge` | words |
 | `\%` | text `%` outside math (`50%`); inside math only if the live lists have `\%` |
 | `\binom{n}{k}` | `$C_n^k$` |
 | Chinese inside `\text{}` | move the Chinese outside the `$…$` |
