@@ -82,7 +82,7 @@ def run_cli(argv: list[str], responses: dict) -> tuple[dict, list[tuple[str, str
 
 
 QUOTE = {"ok": True, "chars": 60, "formulas": 3, "pages_est": 1, "price": {"units": "chars", "amount": 60, "billed_chars": 100, "min_chars": 100,
-                                                                         "list_cents": 20}, "errors": [], "warnings": [],
+                                                                         "list_cents": 0}, "errors": [], "warnings": [],
          "account": {"balance_cents": 1000, "quota_cents": 0, "quota_pages": 0}, "style": {"ref": "3", "label": "No.003", "source": "default"}}
 LAYOUT = {"pages": 1, "chars": 60, "formulas": 3, "unplaced": 0, "warnings": [], "plan": {"paper": {"id": "ruled8"}, "pages": [[]], "rows": []}}
 JOB = {"id": "job-math-style-1", "status": "queued", "chars": 60, "pages_est": 1}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Render a layout plan (the JSON from `inko.py layout --out plan.json` or POST /v1/layout) as a quick preview image,
-so the user can check where every line goes BEFORE paying for a generation.
+so the user can check where every line goes before free handwriting generation.
 
     python preview.py plan.json -o preview.png [--spec layout.json] [--scale 6]
 

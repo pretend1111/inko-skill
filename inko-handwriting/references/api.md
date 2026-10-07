@@ -1,6 +1,6 @@
 # Inko API v1 — what the scripts do for you
 
-`scripts/inko.py` wraps every endpoint (retries, idempotency, polling, downloads, quoting before paying). Use it; call
+`scripts/inko.py` wraps every endpoint (retries, idempotency, polling, downloads, validation before generation). Use it; call
 the HTTP API directly only for something it doesn't cover. Full human docs: https://inkotype.com/developers
 
 - Base URL `https://api.inkotype.com/v1` (override with `INKO_API_BASE`). Auth header `Authorization: Bearer ink_live_…`.
@@ -9,28 +9,27 @@ the HTTP API directly only for something it doesn't cover. Full human docs: http
   `wait` / `download` / `rewrite` can put `layout.json` + `plan.json` or `text.txt` next to the pages). The folder has
   its own `.gitignore` (`*`). No keys are written there unless you ran `auth --project`.
 - Without `--model`, `inko.py` uses `logic-1` when the text contains `$…$` and `lyric-1` otherwise. Quotes include a
-  `payment` line (what the balance pays, what is left, or how much is missing). Money fields are in cents: the job's
-  `cost_cents` is what was charged to the balance; `inko.py`'s summaries show it as `cost_cny`. Older servers (from
-  before pure pay-as-you-go) could also pay from a quota — job / account `quota_cents`, or only `quota_pages` (1 page =
-  ¥1) on even older ones; `inko.py` converts it, uses it in `payment` and shows `quota_used_cny` only when it isn't 0.
+  `payment` line that identifies free handwriting inference. New quotes / jobs have `list_cents` / `cost_cents` = 0;
+  `cost_cny` is the displayed amount. Historical paid jobs retain their actual costs and quota fields; do not rewrite
+  their history or mistake those records for the current price.
 
 ## Endpoints
 
 | Method & path | inko.py | Notes |
 |---|---|---|
 | `GET /models` (no auth) | `models [--symbols]` | models, Logic's stable/beta/substituted/unsupported lists and `symbols.rewrites` (`\eta` → `n`), pricing constants |
-| `GET /account` | `account`, `default-style` | `balance_cents` (what jobs are paid from), this key's limit and spend today, `default_style` (the general 常用字迹 or null), `default_styles` (`{"lyric-1": …, "logic-1": …}`: what each model uses without `style`, null = fallback), `favorites` (preset codes), `custom_seats`, `can_remove_label` (may use `label: none`). `quota_cents` / `quota_pages` = 0 and `membership` = null are kept only for old clients and will be removed |
+| `GET /account` | `account`, `default-style` | `balance_cents` (account balance, not required for free handwriting), this key's limit and spend today, `default_style` (the general 常用字迹 or null), `default_styles` (`{"lyric-1": …, "logic-1": …}`: what each model uses without `style`, null = fallback), `favorites` (preset codes), `custom_seats`, `can_remove_label` (may use `label: none`). `quota_cents` / `quota_pages` = 0 and `membership` = null are kept only for old clients and will be removed |
 | `GET /styles?model=&favorites=` | `styles --model … [--favorites] --where … --sort …` | all handwritings available to the account, with facets, previews and `favorite` / `default` flags; `favorites=true` = only 收藏 |
 | `GET /styles/{code or id}` | — | one handwriting |
 | `PUT /styles/{code or id}/default?model=` | `default-style CODE [--model logic-1]` | make it the 常用字迹 (account-wide, website too); `model=logic-1` sets Logic's own one (must be one of the account's 8) |
 | `DELETE /styles/default?model=` | `default-style --clear [--model …]` | remove the 常用字迹 (204); with `model` only that model's one |
 | `POST /quote` (free) | `quote --text/--file`, and automatically in `generate` | chars, price, `errors` (blocking) / `warnings` (beta symbols) with paragraph + snippet, `style` that will be used (+ `style_note`) |
 | `POST /layout` (free, 60/min) | `layout --spec … [--out plan.json] [--preview png]` | pages, chars, unplaced, warnings, the plan |
-| `POST /generations` → 202 | `generate …` (quote only) / `generate … --yes` | creates the job; the price is frozen in the balance, settled on success |
+| `POST /generations` → 202 | `generate …` (quote only) / `generate … --yes` | creates a free handwriting job; no balance deduction |
 | `GET /generations/{id}` | `wait ID`, `download ID` | status, progress, files (signed links, 24 h) |
 | `GET /generations?limit=` | `jobs` | recent jobs |
 | `POST /generations/{id}/rewrite` (free) | `rewrite ID --yes` | once per succeeded job, new seed, same settings |
-| `POST /generations/{id}/cancel` | `cancel ID` | refunds the frozen amount |
+| `POST /generations/{id}/cancel` | `cancel ID` | cancels the job; returns any historical held amount |
 | `POST /generations/{id}/delivery-complete` | `delivered ID` | after every wanted file is saved locally: Inko deletes its copies early (links stop working); billing records stay, website files untouched; 409 `not_completed` / `not_api_delivery` |
 
 ## Generation parameters
@@ -61,29 +60,25 @@ downloads to `./inko-output/<time>-<id8>/` with `job.json` (+ `layout.json`, `pl
 
 ## Billing
 
-- Pure pay-as-you-go: ¥0.002 per character (0.2 cents; ¥2 per 1000), minimum 100 characters per job (¥0.20), rounded
-  up to the cent: `list_cents = ceil(max(chars, 100) / 5)`. Website and API have the same price. No membership,
-  subscription or monthly quota.
-- Paid from the account balance = gift balance (new accounts registered with a QQ mailbox get ¥3, others ¥0; top-up
-  bonuses) + topped-up money; the gift
-  balance is used first. Not enough → `402 insufficient_balance`; the user tops up on the website (https://inkotype.com/pricing#topup; the only other
-  purchase there is a custom-handwriting seat, ¥19.9, which isn't generation credit).
-- The quote's `price` is `{"units": "chars", "amount": chars, "billed_chars": max(chars, 100), "min_chars": 100,
-  "list_cents": …}`; `GET /models` → `pricing` = `{"cents_per_char": 0.2, "cents_per_1000_chars": 200, "min_chars": 100}`.
-- Plain jobs count every generated block: each Chinese character, letter, digit, punctuation mark; in formulas each
-  parsed symbol (a fraction bar and a root sign count 1 each). Layout jobs are billed by the plan's `chars` (a formula
-  counts as one).
-- Quotes and layouts are free; failed / canceled jobs are refunded; rewrites are free. The job's `cost_cents` says
-  what was actually charged (settled when the job succeeds; fewer characters written = less charged). Its
-  `quota_cents` is 0 on new jobs (kept for old clients; jobs from before pure pay-as-you-go may show the quota they
-  used).
-- Keys can have a daily spending limit (set on the website) → `429 daily_limit`.
+- Lyric 1 and Logic 1 handwriting inference is free on the website and API: no per-character fee, minimum charge,
+  membership or top-up required. `list_cents`, `cost_cents` and new-job quota usage are 0.
+- `GET /models` provides live `pricing`; `/quote` and `/layout` still validate character support and placement.
+  Keep server-returned fields, including an explicit 0. Never calculate a charge using the retired character tariff.
+- `--yes` means submit, not permission to spend. `--max-cents` defaults to 0, blocking unexpected positive quotes.
+  Report a nonzero quote or `insufficient_balance` as a service / endpoint discrepancy instead of demanding a top-up.
+- The website's DeepSeek assistant charges actual API token usage separately. This handwriting CLI does not call
+  DeepSeek; the external AI agent's provider may charge its own model fees. Do not call all AI usage free.
+- Every user gets one free custom-handwriting seat (two training attempts); enrol it on the website, not by purchasing.
+- New accounts receive a one-time ¥0.10 DeepSeek trial credit. This is unrelated to eligibility for free inference;
+  use `/account` for the actual balance, never infer a gift from the email domain.
+- Failed / canceled current jobs have no inference charge. Historical paid jobs retain their original billing and
+  refund records. A rewrite is free and limited to once per successful original job; fresh generation is also free.
 
 ## Limits
 
 120 requests/min per key; 30 submissions/min per account; concurrent jobs per account (queued + running): 2 when the
-account has any topped-up balance, else 1 (`429 too_many_active`). Jobs that use topped-up money queue ahead of jobs
-paid by the gift balance alone. 20,000 characters and 60 pages per job; 10 keys per account.
+account has any topped-up balance, else 1 (`429 too_many_active`). Free generation does not consume topped-up or gift
+money; do not promise a paid queue priority. 20,000 characters and 60 pages per job; 10 keys per account.
 
 ## Labels
 

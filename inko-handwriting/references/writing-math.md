@@ -133,7 +133,7 @@ weaker ones. It is the source of truth: where it disagrees with anything here, f
 **Unknown commands are refused.** Logic knows only the commands in the live lists. Anything else (an unknown command, or
 the `&` of an `align` environment) is refused by the quote (`unsupported_symbol` in `errors`) and by `generate`
 (`invalid_text`); without that check the whole formula would silently vanish from the page. Replace it (§6) before
-paying. Functions not in the list are written letter by letter as `\operatorname{…}`; a lone point or circle name
+generating. Functions not in the list are written letter by letter as `\operatorname{…}`; a lone point or circle name
 (`圆 O`, `点 D`) as a plain-text letter outside `$…$` stays in the writer's own hand.
 
 **Structures**

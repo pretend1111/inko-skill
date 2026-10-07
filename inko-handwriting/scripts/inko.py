@@ -48,7 +48,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 DEFAULT_BASE = "https://api.inkotype.com/v1"
 UA = f"inko-skill/{VERSION} (+https://inkotype.com/developers)"
 TERMINAL = ("succeeded", "failed", "canceled")
@@ -194,22 +194,21 @@ def api(method: str, path: str, body=None, **kw):
 
 HINTS = {
     "unauthenticated": "The key is missing, mistyped or revoked. Ask the user for a fresh key from inkotype.com → 账户 → API key.",
-    "insufficient_balance": "The balance doesn't cover this job (every job is paid from the balance; there is no membership or "
-                            "quota). Tell the user the price; they top up on inkotype.com (价格 → 充值余额, "
-                            "https://inkotype.com/pricing#topup), then submit again.",
+    "insufficient_balance": "Lyric / Logic handwriting inference is free, even with zero balance. Check the API base, "
+                            "update the skill and recheck the quote; report an unexpected billing response to Inko. "
+                            "Do not ask the user to top up for handwriting. Website DeepSeek usage is billed separately.",
     "invalid_text": "Run `inko.py quote` to see exactly which characters/symbols are the problem and rewrite them.",
     "content_blocked": "The text looks like a forged-document risk (IOU, receipt, contract, signature, certificate, leave note…) "
                        "or violates policy. Tell the user it can't be generated; do not try to work around it.",
     "style_model_mismatch": "That style doesn't support the chosen model. Logic only has 8 styles per account: `inko.py styles --model logic-1`.",
     "style_not_found": "Unknown style. List available ones with `inko.py styles`.",
     "style_not_ready": "That custom handwriting isn't finished yet (still being made on the website); pick another one.",
-    "no_slot": "That custom handwriting isn't in one of the account's custom-handwriting seats any more (a seat was refunded "
-               "or taken back). Pick another handwriting; to use it again the user buys a seat (¥19.9) or deletes another "
-               "custom handwriting on inkotype.com.",
+    "no_slot": "Each account has one free custom-handwriting seat. Check its current handwriting on inkotype.com "
+               "or choose a preset. Do not buy another seat or delete existing handwriting without the user's request.",
     "label_required": "label:none needs the AI-labelling agreement (《AI 生成内容标识协议》) signed by the user on inkotype.com "
                       "(no seat or purchase needed). Until then use label visible.",
     "style_gone": "The handwriting of the original job is no longer available, so it can't be rewritten; generate again with "
-                  "another handwriting (paid, after a new quote).",
+                  "another handwriting (free; validate with a new quote).",
     "idempotency_conflict": "That Idempotency-Key was already used for a different request; drop --idempotency-key or use a new one.",
     "not_completed": "The job hasn't succeeded yet; wait for it before confirming delivery.",
     "not_api_delivery": "Only jobs created through the API can be confirmed as delivered; website jobs are left alone.",
@@ -219,7 +218,7 @@ HINTS = {
     "too_many_active": "The account already has the maximum number of running jobs; wait for them (inko.py jobs) and retry.",
     "daily_limit": "This key hit its daily spending cap; the user can raise it on the website or wait until tomorrow (Beijing time).",
     "queue_full": "Service is busy; retry in a few minutes.",
-    "free_paused": "Generation on the free gift balance alone is paused at peak time; the user can top up or try later.",
+    "free_paused": "Generation is temporarily unavailable. Retry later; do not suggest topping up to unlock free handwriting inference.",
     "link_expired": "Signed download links last 24h; run `inko.py download JOB_ID` to get fresh ones.",
     "no_rewrite": "Only one free rewrite per succeeded job, and rewrites can't be rewritten again.",
 }
@@ -1271,19 +1270,16 @@ def _quote(text: str, model: str, size: str, style: str | None = None) -> dict:
     return api("POST", "/quote", body)
 
 
-MIN_CHARS = 100                                                    # every job is billed as at least 100 characters
+MIN_CHARS = 0                                                      # no minimum charge for free inference
 
 
 def price_cents(chars: int) -> int:
-    """List price in cents: ¥0.002 per character (0.2 cents; ¥2 / 1000), at least 100 characters, rounded up to the cent.
-    Same price on the website and the API since 2026-09-28."""
-    return -(-max(MIN_CHARS, int(chars or 0)) // 5)
+    """Fallback for free Lyric / Logic inference; never reconstruct the retired character tariff."""
+    return 0
 
 
 def quota_cents(d: dict | None) -> int:
-    """Quota in cents (remaining on an account, used by a job) — only older servers have one. Inko is pure pay-as-you-go
-    now: current servers send quota_cents = 0 (kept for old clients, to be dropped); servers from before 2026-09-28 only
-    quota_pages (1 page = ¥1)."""
+    """Decode historical quota fields without changing old job records. New handwriting jobs use no quota."""
     d = d or {}
     if d.get("quota_cents") is not None:
         return int(d["quota_cents"])
@@ -1304,29 +1300,16 @@ def _money(acc: dict | None) -> dict:
 
 
 def payment(chars: int, list_cents: int, account: dict | None) -> str:
-    """How the job will be paid. Pure pay-as-you-go: ¥0.002 per character from the account balance (the server uses the
-    gift balance before topped-up money). An older server that still reports quota (quota_cents / quota_pages > 0)
-    uses it first, at the same price."""
-    acc = account or {}
-    need = int(list_cents or 0) or price_cents(chars)
-    quota = quota_cents(acc)
-    if quota >= need:
-        return f"¥{need / 100:.2f} of quota (¥{(quota - need) / 100:.2f} quota left after this job); balance untouched"
-    if acc.get("balance_cents") is None:
-        return (f"all ¥{quota / 100:.2f} remaining quota + ¥{(need - quota) / 100:.2f} from the balance" if quota > 0
-                else f"¥{need / 100:.2f} from the balance")
-    bal = int(acc.get("balance_cents") or 0)
-    rest = need - quota
-    head = (f"all ¥{quota / 100:.2f} remaining quota + ¥{rest / 100:.2f} from the balance" if quota > 0
-            else f"¥{need / 100:.2f} from the balance")
-    if bal < rest:
-        return (f"{head}, but only ¥{bal / 100:.2f} is available: the user must top up at least ¥{(rest - bal) / 100:.2f} "
-                "on inkotype.com first")
-    return f"{head} (¥{bal / 100:.2f} available, ¥{(bal - rest) / 100:.2f} left after this job)"
+    """Preserve an explicit zero quote; never infer a charge from the character count or balance."""
+    need = int(list_cents or 0)
+    if need == 0:
+        return "Free handwriting inference (¥0); no balance deduction or top-up required. Website DeepSeek API usage is separate."
+    return (f"Unexpected nonzero handwriting quote: ¥{need / 100:.2f}. Check the API base and current service pricing; "
+            "do not top up or submit automatically. The default --max-cents 0 blocks this quote.")
 
 
 def _summarize_quote(q: dict) -> dict:
-    lc = (q.get("price") or {}).get("list_cents", 0)
+    lc = (q.get("price") or {}).get("list_cents") or 0
     out = {"ok": q.get("ok"), "chars": q.get("chars"), "formulas": q.get("formulas"), "pages_est": q.get("pages_est"),
            "price_cny": round(lc / 100, 2), "list_cents": lc, "payment": payment(q.get("chars") or 0, lc, q.get("account")),
            "account": q.get("account"),
@@ -1481,7 +1464,7 @@ def _finish(job: dict, a, extra: dict | None = None, info: dict | None = None) -
     if job.get("status") != "succeeded":
         log_job(job)
         emit({"ok": False, "job_id": job["id"], "status": job.get("status"), "error": job.get("error"),
-              "note": "Failed or canceled jobs are refunded automatically."})
+              "note": "Handwriting inference is free. Any funds held for a historical paid job are refunded automatically."})
         sys.exit(1)
     out = _out_dir(a, job["id"])
     what = set((getattr(a, "what", None) or "png,pdf,scene").split(","))
@@ -1495,9 +1478,9 @@ def _finish(job: dict, a, extra: dict | None = None, info: dict | None = None) -
                + " --yes` re-writes the whole job once for free (new seed: other characters change too — compare both versions).")
     else:
         nxt = ("Look at the PNG(s) before handing them over. No free rewrite is left for this job (a rewrite can't be rewritten): "
-               "keep whichever version is better, or generate again with another --seed (paid).")
+               "keep whichever version is better, or generate again with another --seed (handwriting inference is free).")
     if got.get("scene"):
-        nxt += (" Spacing / position / pen problems (not wrong characters): fix them locally without paying again — "
+        nxt += (" Spacing / position / pen problems (not wrong characters): fix them locally without regenerating — "
                 "`scene.py inspect` / `tighten` / `drift` / `move` / `pen`, `scene.py editor` for dragging by hand, then "
                 "`scene.py render` (references/scene.md).")
     if (info or {}).get("math_style"):
@@ -1534,9 +1517,9 @@ def cmd_generate(a) -> None:
     # 1) always check first (free): unsupported symbols, price
     if a.layout:
         plan = api("POST", "/layout", {"model": a.model, "layout": body["layout"]})
-        pr = plan.get("price") or {}                         # servers since 09-28: billed like the job (formulas by the symbols written)
+        pr = plan.get("price") or {}                         # retain explicit server quotes, including zero
         chars = pr.get("amount") if pr.get("amount") is not None else (plan.get("chars") or 0)
-        cents = pr.get("list_cents") if pr.get("list_cents") is not None else price_cents(chars)   # ¥0.002 / char, min 100
+        cents = pr.get("list_cents") if pr.get("list_cents") is not None else price_cents(chars)
         q = {"ok": not plan.get("unplaced"), "chars": chars, "pages_est": plan.get("pages"), "list_cents": cents,
              "price_cny": round(cents / 100, 2), "unplaced": plan.get("unplaced"), "warnings": plan.get("warnings")}
         page_style = (spec.get("d") or {}).get("style")               # a layout's page-wide handwriting beats the 常用字迹
@@ -1563,8 +1546,9 @@ def cmd_generate(a) -> None:
     if not a.yes:
         emit({"submitted": False, "reason": "confirmation_required", "quote": q, **fmt,
               "request": {k: v for k, v in body.items() if k not in ("text", "layout")},
-              "next": "Tell the user the price and settings; after they agree, run the same command again with --yes." + ms})
-        note("NOT SUBMITTED: confirm the price with the user, then add --yes")
+              "next": "Preview only. Handwriting inference is free. If the user requested generation and settings are resolved, "
+                      "run again with --yes; no payment confirmation is needed for a zero quote." + ms})
+        note("NOT SUBMITTED: preview only; add --yes to generate for the user's request")
         return
     # 2) submit with an idempotency key (safe to retry)
     idem = a.idempotency_key or "skill-" + hashlib.sha256((json.dumps(body, sort_keys=True, ensure_ascii=False) + str(uuid.uuid4())).encode()).hexdigest()[:40]
@@ -1619,7 +1603,7 @@ def cmd_rewrite(a) -> None:
 
 def cmd_cancel(a) -> None:
     job = api("POST", f"/generations/{a.job_id}/cancel")
-    emit({"job_id": job["id"], "status": job["status"], "note": "The amount frozen for this job goes back to the balance."})
+    emit({"job_id": job["id"], "status": job["status"], "note": "Free handwriting job canceled; any historical held funds are returned."})
 
 
 def cmd_delivered(a) -> None:
@@ -1697,8 +1681,8 @@ def main() -> None:
     s.add_argument("--pen-color", choices=["black", "blue", "blueblack"])
     s.add_argument("--pen-weight", type=float, help="-1..1 (0 = as written)")
     s.add_argument("--pen-ink", type=float, help="-1..1 darkness (0 = as written)")
-    s.add_argument("--yes", action="store_true", help="really submit (costs money); without it only the quote is shown")
-    s.add_argument("--max-cents", type=int, help="refuse if the list price is above this")
+    s.add_argument("--yes", action="store_true", help="submit the requested generation (handwriting inference is free); otherwise preview only")
+    s.add_argument("--max-cents", type=int, default=0, help="refuse if the quoted price exceeds this (default: 0, free inference only)")
     s.add_argument("--idempotency-key", help="reuse to retry a submit safely")
     s.add_argument("--no-wait", action="store_true")
     s.add_argument("--out", help="download folder (default ./inko-output/<time>-<id>)")

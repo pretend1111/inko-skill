@@ -2,7 +2,7 @@
 name: inko-handwriting
 description: >-
   Generate standard flat handwritten PNG pages and PDFs from text, notes, letters, essays and math solutions via
-  Inko (inkotype.com). Choose paper, handwriting and pen; edit layout and ink locally. Use for 手写、手写作业、
+  Inko (inkotype.com), with free Lyric / Logic handwriting inference. Choose paper, handwriting and pen; edit layout and ink locally. Use for 手写、手写作业、
   手写笔记、手写信、二维手写图片、handwritten pages or handwritten PDF. Input images may be read for their content;
   output is always a flat page, without camera effects or compositing into real-world scenes.
 ---
@@ -11,8 +11,16 @@ description: >-
 
 Inko writes text the way a person does — real pen strokes, not a font — and returns A4 pages (PNG + PDF, 300 dpi).
 This skill makes you the expert operator: you prepare the content, pick paper / size / handwriting / pen with the user,
-pay only after they agree, and deliver standard flat page images or PDFs. Preserve the natural handwriting,
+generate for their request for free, and deliver standard flat page images or PDFs. Preserve the natural handwriting,
 not a simulated camera: no perspective, desk scenes, shadows, page curl, scanner effects or photo compositing.
+
+## Current pricing — skill 1.6.0 (2026-10-08)
+
+**Lyric 1 and Logic 1 handwriting inference is free on both the website and this API / Skill.** No per-character
+fee, minimum charge, membership or recharge is required; an authenticated account with zero balance can generate.
+The website's DeepSeek assistant is billed separately for actual API token usage. This handwriting CLI does not call
+DeepSeek; the external AI agent's own model fees belong to its provider, not Inko handwriting inference.
+Each user also gets one free custom-handwriting seat; never suggest purchasing an extra seat.
 
 All scripts are in `scripts/` next to this file (call them with the path you installed to, e.g.
 `python .claude/skills/inko-handwriting/scripts/inko.py …`). They print JSON on stdout — read it, don't guess.
@@ -50,16 +58,12 @@ python scripts/inko.py doctor          # Python deps, API reachable, key valid, 
 
 ## Rules that matter (and why)
 
-1. **Money: quote first, submit only after a yes.** `inko.py generate` without `--yes` only quotes (free) and prints the
-   price. Tell the user the price, character count, model, handwriting, pen and paper in one short message and wait for
-   agreement; then re-run with `--yes`. Price: ¥0.002 per character (¥2 per 1000), at least 100 characters per job
-   (= ¥0.20); same price as the website. Pure pay-as-you-go: it comes out of the account balance (the gift balance
-   first — new accounts registered with a QQ mailbox get ¥3, others start at ¥0 — then topped-up money); there is no
-   membership, subscription or monthly quota. The quote's
-   `payment` line says what the balance pays and whether it is enough ("¥0.20 from the balance (¥3.00 available, ¥2.80
-   left after this job)") — tell the user that, not just the ¥ figure. Not enough → they top up on inkotype.com first.
-   If the user already gave you a budget ("anything under ¥5 is fine"), pass `--max-cents 500 --yes` (compared with the
-   list price) and don't ask again. `--max-cents` checks one job; across several jobs keep the running total yourself.
+1. **Free inference: validate first, then generate for the user's request.** `inko.py generate` without `--yes`
+   only checks the content and settings. Quotes remain useful for character support, page count, fit and handwriting;
+   the price should be 0. Once the user has requested generation and essential settings are resolved, run with
+   `--yes` without asking for payment confirmation or a top-up. `--max-cents` defaults to 0: an unexpected positive
+   quote is blocked, not silently hidden. Check the API base / service pricing and report the discrepancy instead of
+   assuming inference is paid. Free does not mean unlimited: respect authentication, rate limits and queue capacity.
 2. **Keep the AI labels.** Every page carries a visible label 「AI生成 · Inko」 and hidden AIGC metadata, required by
    Chinese law (GB 45438-2025) and Inko's terms. Never crop, cover, blur, recolour or paint over the label, never strip
    metadata, never re-save through tools that drop it. The scripts here re-apply the label (≥ 5 % of the shortest side,
@@ -75,11 +79,11 @@ python scripts/inko.py doctor          # Python deps, API reachable, key valid, 
    check it: all text present, nothing overlapping, no odd wide gaps (around formulas especially), writing sitting on
    the ruled lines (not crossing them), left edges not ruler-straight (drifted — see post-processing), label intact, and
    the usual weak spots — punctuation right after a formula, digits in dates, units. Layout / spacing / pen problems
-   are fixed locally from `scene.zip` without paying again (post-processing); only wrong characters need a rewrite. `inko.py rewrite JOB --yes` re-writes the **whole** job once for free
+   are fixed locally from `scene.zip` without regenerating (post-processing); only wrong characters need a rewrite. `inko.py rewrite JOB --yes` re-writes the **whole** job once for free
    with a new seed: other characters change too, so compare both versions and keep the better one; a rewrite can't be
    rewritten. If a character that matters is still wrong after that, rephrase the text around it (a digit in a heading →
-   Chinese numeral, drop a comma right after a formula) and generate again — paid, so within the user's budget and at
-   most once or twice; otherwise deliver the best version and say which character is off. `inko.pdf` is made of the
+   Chinese numeral, drop a comma right after a formula) and generate again — still free, but at most once or twice
+   rather than retrying endlessly; otherwise deliver the best version and say which character is off. `inko.pdf` is made of the
    same pages as the PNGs — check the PNGs, and copy the PDF to a meaningful name when delivering.
 5. **Content quality is your job.** Inko writes exactly what you give it. Typos, a wrong answer or a clumsy line break
    will be faithfully hand-written — proofread the text first.
@@ -115,7 +119,7 @@ python scripts/inko.py doctor          # Python deps, API reachable, key valid, 
 
 For image/PDF homework, also follow the completeness checklist in `references/scenarios.md`.
 Automatic preparation means reusing the user's defaults, not repeatedly asking style questions; it does not create
-spending permission. A website adapter's provided tools and layout rules take precedence over CLI-only instructions.
+permission for unrelated paid services. A website adapter's provided tools and layout rules take precedence over CLI-only instructions.
 
 ## Pick the model
 
@@ -185,10 +189,10 @@ and never treat your recommendation as their answer. Typical:
   to use the writable equivalent the list suggests, with your recommendation first and one or two real examples from
   their text. If they already said how, or told you
   not to ask about such things, just apply the recommended form and mention it.
-- **Price** (always, before submitting).
+- **Cost**: state that handwriting inference is free; do not ask for payment confirmation for a zero quote.
 
 If the user said "you decide" / 「随便」 / 「默认」 / 「不要问」 or the request is clear, decide, state your choices in one line,
-and only confirm the price. Don't stop for optional layout preferences (margins, line spacing, alignment).
+and proceed after validation. Don't stop for payment confirmation or optional layout preferences (margins, line spacing, alignment).
 
 ## Post-processing (all local, instant, free)
 
@@ -203,7 +207,7 @@ and only confirm the price. Don't stop for optional layout preferences (margins,
 
 Prefer the API's own `pen` options (`--pen-type/--pen-color/--pen-weight/--pen-ink`) when generating — they are applied at
 full quality; use `ink.py` for colours the API doesn't have (red, green, purple, #hex), textures like marker, or quick
-"what if" variants without paying again. All edits stay on the flat page. `paper.py make` can draw a separate
+"what if" variants without regenerating. All edits stay on the flat page. `paper.py make` can draw a separate
 standard paper background; it does not paste handwriting into a photo. Details: `references/postprocess.md`.
 
 ## Scenario guides

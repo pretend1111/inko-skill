@@ -2,6 +2,11 @@
 
 **[简体中文](README.md) | English**
 
+**1.6.0 (2026-10-08): free Lyric 1 / Logic 1 handwriting inference.** Website, API and Skill generation have no
+per-character fee or minimum charge; zero-balance accounts can generate. Website DeepSeek assistance is billed
+separately for actual API usage. This handwriting CLI does not call DeepSeek; an external AI agent's own model fees
+belong to its provider. Every user also has **one free custom-handwriting seat**. Reinstall older skill copies.
+
 **1.5.0 (2026-10-06): the skill stops copying what the models can write.** Which rarer characters each model writes in
 plain text (Greek letters, pinyin tones, superscripts, `½`, Roman numerals, `⑪`, `「」`, `°` …) and which LaTeX commands
 Logic writes now come live from the server — `inko.py charset` (new) and `inko.py models --symbols` — so the skill stays
@@ -34,15 +39,14 @@ See [math support](inko-handwriting/references/writing-math.md).
    is a good idea.
 2. Send your AI agent this repository link and the key, e.g.
    *"Install the handwriting skill from https://github.com/pretend1111/inko-skill — my Inko API key is ink_live_…"*
-3. Ask for handwriting. The agent always shows you the price before anything is charged
-   (¥0.002 per character, i.e. ¥2 per 1000, at least 100 characters per job; quotes and previews are free). It is pure
-   pay-as-you-go from your Inko balance — no subscription or membership; accounts registered with a QQ mailbox get ¥3
-   to try it out.
+3. Ask for handwriting. Lyric / Logic inference is free, without a top-up. The agent checks characters and layout
+   before generating with a zero quote; no repeated payment confirmation. New users receive a one-time ¥0.10
+   DeepSeek trial credit, separate from free handwriting; read actual balances from the account API.
 4. Optional: in the website's 字迹库, set a **常用字迹** (your default handwriting) and ★ favourites. The agent writes in
    your 常用字迹 unless you ask for another, and picks from your favourites when it has to choose. Say
    *"以后都用这个字迹"* and it saves the new one for you.
-5. Optional: **your own handwriting** (专属字迹). Buy a custom-handwriting seat on the website (¥19.9, one-off, never
-   expires; one seat = one custom handwriting) and enrol your samples there; the agent can then write in it (Lyric 1).
+5. Optional: **your own handwriting** (专属字迹). Each user has exactly one free seat with two training attempts.
+   Enrol your samples on the website; the agent can then write in it (Lyric 1).
 
 ## For AI agents: how to install this skill
 
@@ -91,9 +95,9 @@ of retired scripts, without touching API keys.
 
 ## Money, keys, labels
 
-- **Nothing is charged without a confirmed quote**: `inko.py generate` only quotes unless the agent adds `--yes`, and the
-  skill tells the agent to get your OK (or stay within a budget you gave) first. Failed/canceled jobs are refunded; one
-  free re-write per job.
+- **Handwriting inference is free**: `inko.py generate` only validates unless the agent adds `--yes`. The default
+  `--max-cents 0` blocks unexpected nonzero quotes. Rewrites and fresh generations are free; the rewrite endpoint
+  still allows one rewrite per successful original job. DeepSeek and external AI model fees are separate.
 - **Your key** stays on your machine (user config folder or `./.inko/key`, git-ignored). Revoke it on the website any time.
 - **AI labels**: every Inko page carries a visible 「AI生成 · Inko」 label and hidden AIGC metadata as required by Chinese
   law (GB 45438-2025). The scripts keep both on every derived image and PDF and re-apply the visible label at the

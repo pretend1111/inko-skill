@@ -8,7 +8,7 @@ page curl, scan/photocopy effects, or paste handwriting into a real-paper photog
 
 Read the questions from text or an input image. Solve them and prepare student-style steps using `writing-math.md`:
 解 / 由…得 / 所以 / 答, formulas next to their lead-ins, supported symbols only. Use logic-1, usually a `ruled8`
-layout with indent 0. Run the free quote and layout preview, confirm the cost, generate, inspect every answer,
+layout with indent 0. Run the free quote and layout preview, check the zero quote, generate, inspect every answer,
 and deliver the flat PNG pages and their PDF. For a worksheet input, number the answers on a separate standard page.
 
 ## Homework from attachments: completeness before styling
@@ -35,7 +35,7 @@ and deliver the flat PNG pages and their PDF. For a worksheet input, number the 
   then use the adapter's measured fit/preview. Do not shorten an answer by dropping required words or move it onto
   printed text. Report an unresolved fit instead of claiming the final image was generated.
 - Preview and final generation are separate: a draft is not a PNG result. Quote once for the resolved layout, generate
-  within the user's granted budget (otherwise confirm the quote), and resume the same job on connection loss.
+  for free once the requested content and settings are resolved, and resume the same job on connection loss.
 
 ## Notes and handouts
 
@@ -61,4 +61,5 @@ above 20,000 characters / 60 pages at paragraph boundaries and keep handwriting 
 Prefer `scene.py inspect` then `tighten`, `move`, `scale`, `pen` and `render` for spacing and appearance fixes.
 `ink.py restyle` changes a whole page's colour, weight or pen texture; `ink.py extract` creates a transparent
 handwriting layer for two-dimensional design. `compose.py drift` is an optional line-position edit only; it never
-adds depth or a camera effect. Regenerate only for errors that these flat-page tools cannot fix, within the budget.
+adds depth or a camera effect. Regenerate only for errors that these flat-page tools cannot fix; inference remains
+free, but avoid endless retries.

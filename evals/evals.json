@@ -5,7 +5,7 @@
       "id": 1,
       "name": "math-homework-flat",
       "prompt": "读取 math_problems.jpg 里的三道数学题，写出像学生一样的解题步骤，交付横线纸上的标准二维 PNG 和 PDF，不添加拍摄效果。",
-      "expected_output": "Correct solutions (1: x1=2, x2=3; 2: -3; 3: width 5 cm, length 8 cm, area 40 cm²) written student-style (解/步骤/答), generated with logic-1 on ruled paper after a quote within budget; PNG page(s) and a PDF in outputs with the visible AI label and AIGC metadata intact.",
+      "expected_output": "Correct solutions (1: x1=2, x2=3; 2: -3; 3: width 5 cm, length 8 cm, area 40 cm²) written student-style (解/步骤/答), generated with logic-1 on ruled paper after a zero quote, without a top-up or payment confirmation; PNG page(s) and a PDF in outputs with the visible AI label and AIGC metadata intact.",
       "files": [
         "evals/files/math_problems.jpg"
       ],
@@ -18,7 +18,7 @@
         "Exercise-book look (ruled paper layout)",
         "Visible AI label intact on every delivered image",
         "AIGC metadata kept on every delivered image",
-        "Stayed within the ¥3 budget"
+        "Handwriting inference cost and quota usage are zero"
       ]
     },
     {

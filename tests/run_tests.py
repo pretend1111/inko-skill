@@ -170,42 +170,24 @@ def main() -> int:
         h = run(S / "inko.py", "default-style", "--help")["_stdout"]
         assert "--clear" in h and "常用字迹" in h, h
 
-    @test("inko.py prices ¥0.002 / char (min 100 chars), pays from the balance only (older servers' quota still handled)")
+    @test("inko.py free inference preserves zero quotes, historical records, and default zero budget")
     def _():
-        import re
         import inko
-        assert [inko.price_cents(n) for n in (0, 12, 100, 101, 812, 1000)] == [20, 20, 20, 21, 163, 200]
-        # current servers: pure pay-as-you-go; quota_cents / quota_pages are 0 and membership is null (legacy keys)
-        acc = {"balance_cents": 500, "quota_cents": 0, "quota_pages": 0, "membership": None}
-        p = inko.payment(812, 0, acc)                                                         # no list price given: computed here
-        assert p == "¥1.63 from the balance (¥5.00 available, ¥3.37 left after this job)", p
-        p = inko.payment(812, 163, {**acc, "balance_cents": 100})
-        assert p == "¥1.63 from the balance, but only ¥1.00 is available: the user must top up at least ¥0.63 on inkotype.com first", p
-        assert inko.payment(12, 20, None) == "¥0.20 from the balance"                        # no account in the quote
-        q = inko._summarize_quote({"ok": True, "chars": 12, "account": {"balance_cents": 1000, "quota_cents": 0, "quota_pages": 0},
-                                   "price": {"units": "chars", "amount": 12, "billed_chars": 100, "min_chars": 100, "list_cents": 20}})
-        assert q["price_cny"] == 0.2 and q["list_cents"] == 20, q
-        assert q["payment"] == "¥0.20 from the balance (¥10.00 available, ¥9.80 left after this job)", q
-        assert not re.search(r"quota|member|page|页|额度|会员", q["payment"]), q["payment"]
-        assert inko._money(acc) == {"balance_cents": 500}
-        assert inko._money({**acc, "can_remove_label": True}) == {"balance_cents": 500, "can_remove_label": True}
-        # older servers still had a quota (membership / new-user gift), used before the balance at the same price
-        assert inko.quota_cents({"quota_cents": 280, "quota_pages": 2.8}) == 280
-        assert inko.quota_cents({"quota_pages": 2.8}) == 280 and inko.quota_cents({}) == 0 and inko.quota_cents(None) == 0
-        p = inko.payment(12, 20, {"balance_cents": 0, "quota_cents": 300})
-        assert p == "¥0.20 of quota (¥2.80 quota left after this job); balance untouched", p
-        p = inko.payment(1500, 300, {"balance_cents": 500, "quota_pages": 2.8})              # even older: quota_pages only
-        assert p == "all ¥2.80 remaining quota + ¥0.20 from the balance (¥5.00 available, ¥4.80 left after this job)", p
-        assert inko._money({"balance_cents": 0, "quota_pages": 2.8}) == {"balance_cents": 0, "quota_cents": 280}
-        # hints and help: no membership / subscription any more; label:none = the signed agreement only (since 2026-10, no seat)
-        assert not any(re.search(r"member|subscri|会员|额度", h, re.I) for k, h in inko.HINTS.items() if k != "insufficient_balance")
-        assert "top up" in inko.HINTS["insufficient_balance"] and "no membership" in inko.HINTS["insufficient_balance"]
-        assert "agreement" in inko.HINTS["label_required"] and "no seat" in inko.HINTS["label_required"]
-        assert "pricing#topup" in inko.HINTS["insufficient_balance"] and "seat" in inko.HINTS["no_slot"]
-        assert inko.payment(12, 20, {"quota_cents": 5}) == "all ¥0.05 remaining quota + ¥0.15 from the balance"     # older server, no balance field
+        for n in (0, 12, 100, 101, 812, 1000, 20000):
+            assert inko.price_cents(n) == 0
+        for acc in (None, {}, {"balance_cents": 0}, {"balance_cents": 500, "quota_cents": 300}):
+            p = inko.payment(812, 0, acc)
+            assert "Free handwriting inference" in p and "no balance deduction" in p, p
+        q = inko._summarize_quote({"ok": True, "chars": 812, "account": {"balance_cents": 0},
+                                  "price": {"list_cents": 0}})
+        assert q["price_cny"] == 0 and q["list_cents"] == 0
+        assert "Unexpected nonzero" in inko.payment(12, 20, None)
+        assert inko.quota_cents({"quota_pages": 2.8}) == 280
+        assert inko._money({"balance_cents": 500}) == {"balance_cents": 500}
+        assert "free" in inko.HINTS["insufficient_balance"]
+        assert "one free" in inko.HINTS["no_slot"]
         h = run(S / "inko.py", "generate", "--help")["_stdout"]
-        hh = re.sub(r"-\s+", "-", re.sub(r"\s+", " ", h))                                  # argparse may wrap at a hyphen
-        assert "AI-labelling agreement" in hh and "custom-handwriting seat" not in hh, h
+        assert "costs money" not in h and "default: 0" in h
 
     @test("inko.py catches swallowed LaTeX backslashes")
     def _():
@@ -247,7 +229,7 @@ def main() -> int:
                 run(S / "inko.py", "default-style", *([prev] if prev else ["--clear"]))
             assert (run(S / "inko.py", "default-style").get("default_style") or {}).get("ref") == prev
 
-    for name in ("test_math_style.py", "test_drift.py", "test_scene.py", "test_flat_scope.py"):      # separate suites (own fixtures), same pass/fail
+    for name in ("test_math_style.py", "test_drift.py", "test_scene.py", "test_flat_scope.py", "test_free_inference.py", "test_logic_symbols.py", "test_charset_live.py"):      # separate suites (own fixtures), same pass/fail
         if not (HERE / name).exists():
             continue
 

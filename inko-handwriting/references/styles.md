@@ -5,9 +5,9 @@
 - **Lyric 1** (`lyric-1`): the whole preset library (several hundred handwritings, `No.001` …) for every account, plus the
   user's own **custom handwriting** (专属字迹) if they made one on the website (id = UUID; Lyric only; it can only
   write common Chinese characters — the quote flags anything else). Making one needs a **custom-handwriting seat**
-  (专属字迹席位) bought on the website: ¥19.9 per seat, a one-off purchase that never expires; one seat holds one custom
-  handwriting (trained from the user's own samples, up to 2 trainings). Accounts start with no seat. The API can't
-  buy seats or enrol handwriting — send the user to inkotype.com for that. A seat is only about custom handwriting;
+  (专属字迹席位): every user has exactly one free seat, holding one custom handwriting
+  (trained from the user's own samples, up to 2 trainings). No purchase is needed. Enrol handwriting on inkotype.com;
+  this CLI does not perform enrolment. A seat is only about custom handwriting;
   it has nothing to do with the AI label.
 - **Logic 1** (`logic-1`): 8 curated handwritings per account, assigned at random and fixed. `inko.py styles --model
   logic-1` lists exactly those 8; any other code fails with `style_model_mismatch`.
@@ -72,7 +72,7 @@ favourite / the Logic default and say so in one line (SKILL.md, "Pick the model"
 | 像小学生 | `"neat>=40 round>=55 beauty<=70"`, larger size, pencil |
 | 像老师写的批注 | `"neat>=60 joined>=50"`, red via `ink.py restyle --color red` |
 | 像男生 / 像女生写的 | there's no such facet — show 3–4 contrasting candidates (e.g. angular & loose vs rounded & neat) and let them pick by eye |
-| 像我自己的字 | their custom handwriting (made on the website with a ¥19.9 seat; none yet → tell them how to get one, or offer the closest presets) — `inko.py styles --kind custom` lists it; ask before using one (on a shared or test account it may not be theirs; custom styles have no facets or previews). Custom styles are Lyric-only: no `$…$` formulas — simple arithmetic still works as plain text (`3/4+5/6=19/12`, `2x-3>5`); for real formulas pick the Logic handwriting closest to theirs and say so |
+| 像我自己的字 | their custom handwriting (made on the website with their one free seat; none yet → tell them how to create one, or offer the closest presets) — `inko.py styles --kind custom` lists it; ask before using one (on a shared or test account it may not be theirs; custom styles have no facets or previews). Custom styles are Lyric-only: no `$…$` formulas — simple arithmetic still works as plain text (`3/4+5/6=19/12`, `2x-3>5`); for real formulas pick the Logic handwriting closest to theirs and say so |
 
 ```bash
 python scripts/inko.py styles --model lyric-1 --where "neat>=70 beauty>=70" --sort beauty --limit 12
