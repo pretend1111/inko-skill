@@ -1,113 +1,101 @@
-# Inko handwriting skill
+# Inko 手写 Skill
 
-**[简体中文 → README.zh-CN.md](README.zh-CN.md)**
+**简体中文 | [English](README.en.md)**
 
-**1.5.0 (2026-10-06): the skill stops copying what the models can write.** Which rarer characters each model writes in
-plain text (Greek letters, pinyin tones, superscripts, `½`, Roman numerals, `⑪`, `「」`, `°` …) and which LaTeX commands
-Logic writes now come live from the server — `inko.py charset` (new) and `inko.py models --symbols` — so the skill stays
-right as the models learn; the website's assistant fills the same places from the same source. `doctor`, `models` and
-`charset` say when a newer skill is available. On the same day the models learned 33 Greek letters, pinyin tones,
-superscripts / subscripts, `½`, Roman numerals, `⑪`–`⑳` and more.
+**1.5.0（2026-10-06）：skill 不再抄写「模型能写什么」。** 正文里各模型能写哪些不常见的字（希腊字母、拼音声调、上下标、`½`、罗马数字、`⑪`、`「」`、`°` …）
+和 Logic 公式能用哪些 LaTeX 命令，改为从服务器实时读取——新命令 `inko.py charset` 和 `inko.py models --symbols`——模型学会新字，skill 不用更新也是对的；
+网站上的排版助手从同一处取。`doctor`、`models`、`charset` 发现有更新版 skill 时会提示。同一天模型学会了 33 个希腊字母、拼音声调、上下标、`½`、罗马数字、`⑪`–`⑳` 等。
 
-**1.4.0 (2026-10-05): caught up with the website's assistant.** English handwriting retrained; long formulas wrap at
-`=` / `+` instead of shrinking, and generated formulas match the text size; Logic can have its own 常用字迹
-(`default-style CODE --model logic-1`); a table of what the models can't write and how the agent asks about it; math jobs
-never stop to ask about model/handwriting compatibility; new `inko.py delivered` for the API's delivery confirmation;
-label-free pages need only the signed agreement.
+**1.4.0（2026-10-05）：跟进网站上的排版助手。** 英文手写重新训练过；长公式在等号 / 加减号处折行，不再整条缩小，生成的公式
+和文字一样大；Logic 可以单独设常用字迹（`default-style 编号 --model logic-1`）；补上「哪些字写不了、怎么问用户」的说明；
+数学题不再为模型 / 字迹是否兼容停下来问；新增 `inko.py delivered`（API 的交付确认）；去掉显式标识只需签署协议。
 
-**1.3.0: standard flat page images and PDFs only.** Camera simulation, scene backgrounds, perspective, paper curl,
-scan/photocopy effects and compositing onto photographs have been removed.
+**1.3.0：只产出标准二维平面图片与 PDF。** 已移除拍照拟真、桌面场景、透视、纸张卷曲、扫描/复印效果和照片贴字功能。
 
-Turn notes, letters, essays and math solutions into naturally handwritten **two-dimensional pages** with
-[Inko](https://inkotype.com). Choose standard paper, handwriting and pen; adjust layout, spacing and colour;
-deliver PNG pages and PDFs. Questions may come from an input photo, but the output is a separate flat answer page.
+用 [Inko](https://inkotype.com) 将笔记、书信、作文、数学解答写成自然笔迹的平面页面：
 
-> “Write these math solutions on ruled paper and give me PNG pages and a PDF.”
-> “Turn notes.md into handwritten squared-paper notes in blue ink.”
+- 标准 PNG 图片与 PDF，白纸、米黄纸、方格纸、横线纸、作文纸、田字格
+- 自定义排版、标题、文本框与行距
+- 修改墨色、笔型、粗细和字间距，保留可编辑笔迹包
+- 可以读取题目照片作为输入，但结果只交付独立的平面答题页
 
-Logic retains the 1.2.1 symbol update: `\eta` writes n, `\wedge` / `\vee` are supported.
-See [math support](inko-handwriting/references/writing-math.md).
+> 「把这三道数学题写成横线纸上的手写解答，给我 PNG 和 PDF」
+> 「把 notes.md 写成方格纸笔记，用蓝色圆珠笔」
+> 「把这封信写在米黄色纸上，输出标准图片」
 
-## Use it (for people)
+Logic 仍沿用 1.2.1 的最新符号规则：`\eta` 写成 n，`\wedge` / `\vee` 支持；详见[数学说明](inko-handwriting/references/writing-math.md)。
 
-1. Create an API key at **https://inkotype.com** → 账户 → API key. A separate key for your AI with a daily spending limit
-   is a good idea.
-2. Send your AI agent this repository link and the key, e.g.
-   *"Install the handwriting skill from https://github.com/pretend1111/inko-skill — my Inko API key is ink_live_…"*
-3. Ask for handwriting. The agent always shows you the price before anything is charged
-   (¥0.002 per character, i.e. ¥2 per 1000, at least 100 characters per job; quotes and previews are free). It is pure
-   pay-as-you-go from your Inko balance — no subscription or membership; accounts registered with a QQ mailbox get ¥3
-   to try it out.
-4. Optional: in the website's 字迹库, set a **常用字迹** (your default handwriting) and ★ favourites. The agent writes in
-   your 常用字迹 unless you ask for another, and picks from your favourites when it has to choose. Say
-   *"以后都用这个字迹"* and it saves the new one for you.
-5. Optional: **your own handwriting** (专属字迹). Buy a custom-handwriting seat on the website (¥19.9, one-off, never
-   expires; one seat = one custom handwriting) and enrol your samples there; the agent can then write in it (Lyric 1).
+## 怎么用（给用户）
 
-## For AI agents: how to install this skill
+1. 在 **https://inkotype.com** → 账户 → API key 创建一个 key。建议给 AI 单独建一个，并设置每日花费上限。
+2. 把这个仓库链接和 key 发给你的 AI 助手，比如：
+   「帮我安装这个手写 skill：https://github.com/pretend1111/inko-skill ，我的 Inko API key 是 ink_live_…」
+3. 直接提要求。每次扣费前 AI 都会先告诉你价格（每字 ¥0.002，即 ¥2 / 千字，每次至少按 100 字计；报价和排版预览免费）。
+   纯按量计费，从你的 Inko 余额里扣，没有会员、没有月费；用 QQ 邮箱注册送 ¥3 余额，够先试一试。
+4. 可选：在网站的字迹库里设一款**常用字迹**、收藏几款喜欢的。之后 AI 默认用你的常用字迹写，除非你另外指定；需要它来挑时，先从你的收藏里挑。跟它说「以后都用这个字迹」，它会帮你把常用字迹改过去。
+5. 可选：用**你自己的字**（专属字迹）。在网站上买一个专属字迹席位（¥19.9，一次买断、永久有效，一个席位放一款专属字迹），在网站上录入字样后，AI 就能用它来写（Lyric 1）。
 
-Do these steps in the user's project folder. Don't print the API key back to the user and don't write it into project
-files or commits.
+## 给 AI 助手：安装步骤
 
-1. **Get the files** (a temporary folder is fine):
+在用户的项目目录里执行。不要把 API key 回显给用户，也不要把它写进项目文件或提交记录。
+
+1. **下载**（放在临时目录即可）：
    ```bash
    git clone --depth 1 https://github.com/pretend1111/inko-skill.git inko-skill-src
    ```
-   No git? Download and unzip `https://github.com/pretend1111/inko-skill/archive/refs/heads/main.zip`.
-2. **Install** (needs Python 3.9+; installs Pillow + numpy if missing):
+   没有 git：下载并解压 `https://github.com/pretend1111/inko-skill/archive/refs/heads/main.zip`。
+2. **安装**（需要 Python 3.9+；缺 Pillow / numpy 时会自动 pip 安装）：
    ```bash
-   python inko-skill-src/install.py                 # this project (use python3 if python is Python 2)
-   python inko-skill-src/install.py --scope user    # or: for all of the user's projects
+   python inko-skill-src/install.py                 # 装到当前项目
+   python inko-skill-src/install.py --scope user    # 或者：装给用户的所有项目
    ```
-   It detects your agent and copies `inko-handwriting/` to `.claude/skills/` (Claude Code) or `.agents/skills/`
-   (Codex, Cursor, GitHub Copilot, Gemini CLI, OpenCode, goose, Amp); `--agent claude|agents|both` overrides. It prints
-   JSON with `installed_to` and the next steps. You may delete `inko-skill-src` afterwards.
-3. **Save the key** the user gave you — piped on stdin so it stays out of the argument list:
+   它会识别你是哪种 AI 助手，把 `inko-handwriting/` 复制到 `.claude/skills/`（Claude Code）或 `.agents/skills/`
+   （Codex、Cursor、GitHub Copilot、Gemini CLI、OpenCode、goose、Amp）；可用 `--agent claude|agents|both` 指定。
+   输出 JSON，含 `installed_to` 和下一步。之后可以删掉 `inko-skill-src`。
+3. **保存 key**（从标准输入传入，不出现在命令参数里）：
    ```bash
    printf '%s' 'ink_live_…' | python <installed_to>/scripts/inko.py auth
    ```
-   PowerShell: `'ink_live_…' | python <installed_to>\scripts\inko.py auth`. It is verified and stored in the user's
-   config folder (`~/.config/inko/key`, `%APPDATA%\inko\key`); `--project` stores it in `./.inko/key` (git-ignored)
-   instead. Alternatively the user can set the environment variable `INKO_API_KEY`.
-4. **Check**: `python <installed_to>/scripts/inko.py doctor` → `"ok": true`, key valid, balance shown.
-5. **Start**: read `<installed_to>/SKILL.md` now and follow it — some agents only list a new skill after a restart,
-   but you don't need to wait. Tell the user it's ready, where the key is stored, and suggest a daily spending limit on
-   the key (website → 账户 → API key).
+   PowerShell：`'ink_live_…' | python <installed_to>\scripts\inko.py auth`。key 会先经 API 验证，再存到用户配置目录
+   （`~/.config/inko/key`，Windows 为 `%APPDATA%\inko\key`）；加 `--project` 则存到 `./.inko/key`（已自动 git 忽略）。
+   用户也可以自己设置环境变量 `INKO_API_KEY`。
+4. **自检**：`python <installed_to>/scripts/inko.py doctor`，看到 `"ok": true`、key 有效、余额。
+5. **开始**：现在就读 `<installed_to>/SKILL.md` 并照做——有的助手要重开会话才会列出新 Skill，但你不必等。
+   告诉用户已装好、key 存在哪里，并建议在网站上给这个 key 设每日花费上限。
 
-Updating later: run steps 1–2 again (the installed copy is replaced; the key is not touched).
+以后更新：重复第 1–2 步即可（覆盖安装的副本，不动 key）。
 
-## What's included
+## 里面有什么
 
-- `SKILL.md`, `references/`: flat-page workflow, content, symbols, layouts, styles, API and troubleshooting.
-- `inko.py`: API client, quote, preview, generate, download.
-- `scene.py`: editable glyph packages, spacing and pen changes, browser editor, flat-page export.
-- `ink.py`: ink colour, weight and transparent layers.
-- `paper.py make`: standard flat paper backgrounds; no image detection.
-- `compose.py drift`: optional two-dimensional line-position edits only.
-- `pdf.py`: images to PDF at the selected paper size.
+| 文件 | 作用 |
+|---|---|
+| `SKILL.md`、`references/` | 标准平面输出流程、数学符号、排版、字迹、API 与排错 |
+| `scripts/inko.py` | 自检、字迹、报价、排版预览、生成与下载 |
+| `scripts/scene.py` | 可编辑笔迹包：移动、间距、笔型、浏览器编辑器、平面导出 |
+| `scripts/ink.py` | 修改墨色、粗细、深浅，提取透明手写层 |
+| `scripts/paper.py make` | 绘制标准二维纸张背景，不识别或处理照片 |
+| `scripts/compose.py drift` | 可选的二维行位置微调，不改变纸张几何 |
+| `scripts/pdf.py` | 平面图片合成 PDF |
 
-Image processing uses Pillow and numpy locally. Reinstalling replaces the previous skill folder, including removal
-of retired scripts, without touching API keys.
+图像脚本使用 Pillow 和 numpy，本地处理，不上传图片。更新安装会替换旧 Skill 目录，移除旧版脚本，不动 API key。
 
-## Money, keys, labels
+## 费用、key 与标识
 
-- **Nothing is charged without a confirmed quote**: `inko.py generate` only quotes unless the agent adds `--yes`, and the
-  skill tells the agent to get your OK (or stay within a budget you gave) first. Failed/canceled jobs are refunded; one
-  free re-write per job.
-- **Your key** stays on your machine (user config folder or `./.inko/key`, git-ignored). Revoke it on the website any time.
-- **AI labels**: every Inko page carries a visible 「AI生成 · Inko」 label and hidden AIGC metadata as required by Chinese
-  law (GB 45438-2025). The scripts keep both on every derived image and PDF and re-apply the visible label at the
-  required size; please don't remove them. Pages without the visible label are only available to accounts that
-  signed the AI-labelling agreement on the website (the metadata stays).
-- Inko refuses IOUs, receipts, contracts, certificates, leave notes and signatures (not charged).
+- **不确认不扣费**：`inko.py generate` 不加 `--yes` 只报价；Skill 要求 AI 先征得你的同意（或在你给的预算内）。
+  失败 / 取消的任务自动退款；每单可免费重写一次。
+- **key** 只存在你的电脑上（用户配置目录或 `./.inko/key`），随时可以在网站上吊销。
+- **AI 标识**：按照 GB 45438-2025，Inko 每页都带显式标识「AI生成 · Inko」和隐式元数据。这些脚本在所有衍生图片和
+  PDF 上都保留隐式标识，并按规定大小重新加上显式标识；请不要去除。不带显式标识的页面只对在网站上
+  签了《AI 生成内容标识协议》的账户开放（隐式标识仍然保留）。
+- 借条、收据、合同、证明、请假条、签名等文书会被拒绝（不扣费）。
 
-## Development
+## 开发
 
 ```bash
-python tests/run_tests.py          # offline flat pages, ink, layout, PDF, metadata and feature boundaries
-python tests/test_logic_symbols.py # Logic client contract
+python tests/run_tests.py          # 离线：平面页面、墨色、排版、PDF、标识与功能边界
+python tests/test_logic_symbols.py # Logic 符号契约
 ```
 
-`evals/` covers math from an input image and notes to flat pages/PDF, with an outcome grader.
+`evals/` 包含数学题输入与笔记转标准平面图片/PDF 的任务和评分脚本。
 
-MIT licensed. Inko API usage requires an account and follows its service terms.
+MIT 许可。Inko API 需要账户并遵守服务条款。
